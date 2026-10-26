@@ -13,6 +13,8 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000
 streamlit run ui/streamlit_app.py
 ```
 
+Set `SUPPLIER_API_KEY` to a long random value. The backend refuses every request except `/health` without it (401), or with 503 when it has no key configured. The UI reads the same variable and sends it automatically. On Railway, set the same value on both services. Set `SUPPLIER_UI_PASSWORD` to require a password before the Streamlit page loads; use a long one, since attempts are not rate-limited.
+
 Use **one backend worker**. SQLite jobs live in ignored `var/research_jobs.sqlite`; override with `SUPPLIER_JOB_DB`. Restarting the backend marks unfinished jobs interrupted and preserves their partial results. It does not automatically resume or repeat billable work. Use the saved job ID to load results in the UI.
 
 ## Research workflow
@@ -62,6 +64,8 @@ The configured GPT-5.2 snapshot has standard input/output rates supplied in conf
 
 ## API
 
+Every endpoint except `/health` requires the `X-API-Key` header. The key is checked before routing or reading the request body; `/docs` and `/openapi.json` are covered too.
+
 - `GET /health`: credential-presence flags, never credential values.
 - `POST /research/start`: validated request; returns a queued job ID.
 - `GET /research/status/{job_id}`: progress, counts and limits.
@@ -91,7 +95,7 @@ Example seed-only preview:
 
 `use_apify` is retained as the discovery switch for compatibility. It disables search/Shopping discovery, while seeded-site fetching still uses Apify. Invalid or zero limits are rejected. Legacy unbounded paid diagnostic GET endpoints were removed; use a bounded research preview instead.
 
-For Sheets export, configure the existing Google service-account credentials and share the destination sheet with that account. Preview research does not require Google credentials. Existing sheet columns remain compatible; full evidence stays in the API result and downloadable CSV.
+For Sheets export, configure the existing Google service-account credentials and share the destination sheet with that account. Preview research does not require Google credentials. Existing sheet columns remain compatible; full evidence stays in the API result and downloadable CSV. Sheets rows are written as raw values. CSV downloads prefix text cells starting with `=`, `+`, `-`, `@`, tab or carriage return with an apostrophe, so spreadsheets show them as text instead of running them as formulas.
 
 ## Tests
 
@@ -99,7 +103,7 @@ For Sheets export, configure the existing Google service-account credentials and
 python -m unittest discover -s tests -v
 ```
 
-Tests use temporary SQLite databases/references, mocked actor/model/Sheets calls and a network guard. They cover captured Shopping/Shopify/directory schemas, real supplier-page pilot fixtures, master identity traps, product/variant/currency checks, malformed output, citations, market targeting, shared limits, partial catalogue durability, stop/abort behavior, explicit exports and all three Streamlit workflows. Fixture model responses are mocked, not a live accuracy estimate.
+Tests use temporary SQLite databases/references, mocked actor/model/Sheets calls and a network guard. They cover captured Shopping/Shopify/directory schemas, real supplier-page pilot fixtures, master identity traps, product/variant/currency checks, malformed output, citations, market targeting, shared limits, partial catalogue durability, stop/abort behavior, explicit exports, API-key and UI-password checks, spreadsheet-safe CSV values and all three Streamlit workflows. Fixture model responses are mocked, not a live accuracy estimate.
 
 ## Remaining work
 

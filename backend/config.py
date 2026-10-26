@@ -15,6 +15,8 @@ def env_float(name: str, default: float) -> float:
     except Exception:
         return default
 
+SUPPLIER_API_KEY = os.getenv("SUPPLIER_API_KEY", "")
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2-2025-12-11")
 OPENAI_MAX_OUTPUT_TOKENS = max(128, min(8192, env_int("OPENAI_MAX_OUTPUT_TOKENS", 1800)))

@@ -64,11 +64,12 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 
 ## Step 2 — protect the public API and exports (branch `fix/api-and-export-safety`)
 
-- [ ] Require an `X-API-Key` header (`SUPPLIER_API_KEY`) on every backend endpoint except `/health`. Refuse all requests when no key is configured.
-- [ ] Send the key from the Streamlit UI and show a clear message when it is missing or wrong.
-- [ ] Add an optional UI password (`SUPPLIER_UI_PASSWORD`) for the public Streamlit page.
-- [ ] Neutralize spreadsheet formulas in CSV downloads (values starting with `=`, `+`, `-`, `@`, tab or carriage return).
-- [ ] Set `SUPPLIER_API_KEY` (and optionally `SUPPLIER_UI_PASSWORD`) on both Railway services before deploying.
+- [x] Require an `X-API-Key` header (`SUPPLIER_API_KEY`) on every backend endpoint except `/health`, checked before routing and body parsing. Refuse all requests (503) when no key is configured.
+- [x] Send the key from the Streamlit UI and show a clear message when it is missing or wrong.
+- [x] Add an optional UI password (`SUPPLIER_UI_PASSWORD`) for the public Streamlit page.
+- [x] Neutralize spreadsheet formulas in CSV downloads (values starting with `=`, `+`, `-`, `@`, tab or carriage return).
+- [ ] Set `SUPPLIER_API_KEY` (and optionally `SUPPLIER_UI_PASSWORD`) on both Railway services before deploying. Without the key the deployed backend returns 503 for everything except `/health`.
+- [ ] Push and open the pull request when allowed; merge after your approval.
 
 **Done when:** requests without the key get 401, `/health` still works, and a supplier named `=HYPERLINK(...)` downloads as plain text.
 
@@ -183,5 +184,6 @@ These are initial acceptance targets, not measured results or statistical guaran
 | 2026-10-26 | Security review of the October incidents | No compromised packages or committed credentials. Exposed: public backend without authentication, Node 22.22.3/23.10.0, `certifi` and `pip` in `.venv` that still trust the eMudhra roots, advisories in Starlette, Streamlit, requests and python-dotenv |
 | 2026-10-26 | Master-list comparison profiled on 2,000 real master rows | Known supplier on a subdomain with " Inc." added to its name: 1,997 reported as unmatched (new). Same website with " Inc.": 1,997 name conflicts. Same name on an unrelated website and on a sub-site get the same label. `fellowes.com` and `championtarget.com` blocked as retailers. Skipped candidates leave no record |
 | 2026-10-26 | Plan reorganized; baseline committed locally on `feat/supplier-research-controls` | 48 tests passed; branch renamed from `codex/`; pull request pending because PRs are on hold |
+| 2026-10-26 | Step 2 on local branch `fix/api-and-export-safety` (based on the baseline commit `f1e5b38`) | 52 tests passed (4 new: API key before body parsing, 503 without a configured key, formula-safe CSV, UI password and rejected-key message). Railway variables still to set |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.

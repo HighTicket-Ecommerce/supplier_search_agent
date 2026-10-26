@@ -22,3 +22,10 @@ def domain_from_url(u: str) -> str:
 
 def is_search_destination(url):
     return bool(re.fullmatch(r"(?:google\.(?:com|ca|co\.uk|de|com\.au)|bing\.com)", domain_from_url(url)))
+
+
+def spreadsheet_safe(value):
+    """Prefix text that a spreadsheet would evaluate as a formula."""
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value

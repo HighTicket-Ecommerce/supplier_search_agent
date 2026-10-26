@@ -6,15 +6,18 @@ import socket
 import tempfile
 from types import SimpleNamespace
 import unittest
+import pandas as pd
 import requests
 from unittest.mock import MagicMock, patch
 
 os.environ["OPENAI_API_KEY"] = "offline-test-key"
 os.environ["APIFY_TOKEN"] = "offline-test-token"
 os.environ["OPENAI_MODEL"] = "gpt-5.2-2025-12-11"
+os.environ["SUPPLIER_API_KEY"] = "offline-test-api-key"
+os.environ["SUPPLIER_UI_PASSWORD"] = ""
 
 from fastapi.testclient import TestClient
-from backend import main, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner
+from backend import main, config, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner, utils
 from backend.google_shopping_runner import normalize_shopping_items
 from backend.models import ResearchRequest
 from backend.research_context import ResearchContext, LimitReached, JobStopped
@@ -30,7 +33,7 @@ class ResearchTests(unittest.TestCase):
         self.env.start()
         self.network = patch.object(socket.socket, "connect", side_effect=AssertionError("Unexpected network access"))
         self.network.start()
-        self.client = TestClient(main.app)
+        self.client = TestClient(main.app, headers={"X-API-Key": "offline-test-api-key"})
         web_fetcher._CACHE.clear()
 
     def tearDown(self):
@@ -64,6 +67,28 @@ class ResearchTests(unittest.TestCase):
         self.assertFalse(request.use_shopping)
         self.assertEqual(request.candidate_urls, ["https://homecraftsaunas.com"])
         self.assertEqual(request.allowed_countries, ["Canada"])
+
+    def test_api_key_is_checked_before_body_parsing_except_health(self):
+        anonymous = TestClient(main.app)
+        self.addCleanup(anonymous.close)
+        self.assertEqual(anonymous.get("/health").status_code, 200)
+        for headers in [{}, {"X-API-Key": ""}, {"X-API-Key": "wrong"}]:
+            with self.subTest(headers=headers):
+                self.assertEqual(anonymous.get("/research/status/test", headers=headers).status_code, 401)
+                self.assertEqual(anonymous.post("/research/start", content="{",
+                                                headers={**headers, "Content-Type": "application/json"}).status_code, 401)
+        self.assertEqual(anonymous.get("/docs").status_code, 401)
+        self.assertEqual(self.client.post("/research/start", content="{", headers={"Content-Type": "application/json"}).status_code, 422)
+        with patch.object(config, "SUPPLIER_API_KEY", ""):
+            self.assertEqual(self.client.get("/research/status/test").status_code, 503)
+
+    def test_spreadsheet_formulas_are_neutralized_in_csv_downloads(self):
+        for value in ['=HYPERLINK("https://evil.example")', "+1 604 555 0100", "-2+3", "@SUM(A1)", "\tcmd", "\rcmd"]:
+            self.assertEqual(utils.spreadsheet_safe(value), "'" + value)
+        for value in ["Homecraft", "", -1, 2.5, None, ["=x"]]:
+            self.assertEqual(utils.spreadsheet_safe(value), value)
+        frame = pd.DataFrame([{"supplier_name": "=1+1", "score": -1}])
+        self.assertEqual(frame.map(utils.spreadsheet_safe).to_csv(index=False).splitlines()[1], "'=1+1,-1")
 
     def test_seed_only_api_run_never_calls_discovery_or_sheets(self):
         with patch.object(research_runner, "run_serp_discovery") as serp, \
@@ -315,8 +340,10 @@ class ResearchTests(unittest.TestCase):
     def test_streamlit_seed_preview_flow(self):
         from streamlit.testing.v1 import AppTest
         payloads=[]
+        headers=[]
         result={"job_id":"ui-job","status":"completed","accepted":[],"review":[{"url":"https://fixture.example","reason":"requested_product_not_established"}],"rejected":[],"preview_only":True,"limits":{}}
         def request(method,url,**kwargs):
+            headers.append(kwargs.get("headers"))
             response=MagicMock()
             if method=="POST":
                 payloads.append(kwargs["json"]);response.json.return_value={"job_id":"ui-job"}
@@ -334,6 +361,31 @@ class ResearchTests(unittest.TestCase):
         self.assertTrue(payloads[0]["preview_only"])
         self.assertFalse(payloads[0]["use_apify"])
         self.assertEqual(payloads[0]["candidate_urls"],["https://fixture.example"])
+        self.assertTrue(headers)
+        self.assertTrue(all(h=={"X-API-Key":"offline-test-api-key"} for h in headers))
+
+    def test_streamlit_password_gate_blocks_until_correct(self):
+        from streamlit.testing.v1 import AppTest
+        with patch.dict(os.environ,{"SUPPLIER_UI_PASSWORD":"correct horse battery"}), patch("requests.request") as request:
+            ui=AppTest.from_file("ui/streamlit_app.py").run(timeout=10)
+            self.assertEqual([w.label for w in ui.selectbox],[])
+            ui.text_input[0].set_value("wrong").run(timeout=10)
+            self.assertIn("Incorrect password.",[e.value for e in ui.error])
+            ui.text_input[0].set_value("correct horse battery").run(timeout=10)
+            self.assertIn("Workflow",[w.label for w in ui.selectbox])
+            request.assert_not_called()
+        self.assertFalse(ui.exception)
+
+    def test_streamlit_reports_rejected_api_key(self):
+        from streamlit.testing.v1 import AppTest
+        def request(method,url,**kwargs):
+            response=requests.Response();response.status_code=401;response.url=url
+            return response
+        with patch("requests.request",side_effect=request):
+            ui=AppTest.from_file("ui/streamlit_app.py").run(timeout=10)
+            next(b for b in ui.button if b.label=="Load saved master lists").click().run(timeout=10)
+        self.assertFalse(ui.exception)
+        self.assertTrue(any("rejected the API key" in e.value for e in ui.error))
 
 
 if __name__ == "__main__":
