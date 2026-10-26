@@ -1,0 +1,204 @@
+{
+  "data": {
+    "catalog": {
+      "products": {
+        "totalCount": 1708,
+        "facets": {
+          "facets": [
+            {
+              "name": "U_GL_Brand",
+              "title": "Brand",
+              "values": [
+                {
+                  "title": "American Made Grill",
+                  "count": 19,
+                  "value": "American Made Grill"
+                },
+                {
+                  "title": "American Outdoor Grill",
+                  "count": 11,
+                  "value": "American Outdoor Grill"
+                },
+                {
+                  "title": "Astria",
+                  "count": 7,
+                  "value": "Astria"
+                },
+                {
+                  "title": "Athena",
+                  "count": 51,
+                  "value": "Athena"
+                },
+                {
+                  "title": "Beefeater",
+                  "count": 2,
+                  "value": "Beefeater"
+                },
+                {
+                  "title": "Black and Stone",
+                  "count": 3,
+                  "value": "Black and Stone"
+                },
+                {
+                  "title": "Blue Flame",
+                  "count": 7,
+                  "value": "Blue Flame"
+                },
+                {
+                  "title": "Bromic",
+                  "count": 44,
+                  "value": "Bromic"
+                },
+                {
+                  "title": "Dimplex",
+                  "count": 78,
+                  "value": "Dimplex"
+                },
+                {
+                  "title": "Duravent",
+                  "count": 11,
+                  "value": "Duravent"
+                },
+                {
+                  "title": "Empire",
+                  "count": 73,
+                  "value": "Empire"
+                },
+                {
+                  "title": "Fire By Design",
+                  "count": 2,
+                  "value": "Fire By Design"
+                },
+                {
+                  "title": "Fire Magic",
+                  "count": 13,
+                  "value": "Fire Magic"
+                },
+                {
+                  "title": "GAS",
+                  "count": 6,
+                  "value": "GAS"
+                },
+                {
+                  "title": "Golden Blount",
+                  "count": 2,
+                  "value": "Golden Blount"
+                },
+                {
+                  "title": "Grand Canyon Gas Logs",
+                  "count": 84,
+                  "value": "Grand Canyon Gas Logs"
+                },
+                {
+                  "title": "Harman",
+                  "count": 4,
+                  "value": "Harman"
+                },
+                {
+                  "title": "Heat & Glo",
+                  "count": 242,
+                  "value": "Heat & Glo"
+                },
+                {
+                  "title": "IHP",
+                  "count": 155,
+                  "value": "IHP"
+                },
+                {
+                  "title": "Iron Strike",
+                  "count": 9,
+                  "value": "Iron Strike"
+                },
+                {
+                  "title": "LeGriddle",
+                  "count": 3,
+                  "value": "LeGriddle"
+                },
+                {
+                  "title": "Majestic",
+                  "count": 177,
+                  "value": "Majestic"
+                },
+                {
+                  "title": "Masonlite",
+                  "count": 1,
+                  "value": "Masonlite"
+                },
+                {
+                  "title": "Modern Flames",
+                  "count": 81,
+                  "value": "Modern Flames"
+                },
+                {
+                  "title": "Montigo",
+                  "count": 50,
+                  "value": "Montigo"
+                },
+                {
+                  "title": "Napoleon BBQ",
+                  "count": 1,
+                  "value": "Napoleon BBQ"
+                },
+                {
+                  "title": "Napoleon Hearth",
+                  "count": 186,
+                  "value": "Napoleon Hearth"
+                },
+                {
+                  "title": "Primo",
+                  "count": 17,
+                  "value": "Primo"
+                },
+                {
+                  "title": "Quadra-Fire",
+                  "count": 4,
+                  "value": "Quadra-Fire"
+                },
+                {
+                  "title": "Real Fyre",
+                  "count": 37,
+                  "value": "Real Fyre"
+                },
+                {
+                  "title": "SimpliFire",
+                  "count": 38,
+                  "value": "SimpliFire"
+                },
+                {
+                  "title": "Skytech",
+                  "count": 2,
+                  "value": "Skytech"
+                },
+                {
+                  "title": "Summerset",
+                  "count": 75,
+                  "value": "Summerset"
+                },
+                {
+                  "title": "Summit",
+                  "count": 34,
+                  "value": "Summit"
+                },
+                {
+                  "title": "Superior",
+                  "count": 90,
+                  "value": "Superior"
+                },
+                {
+                  "title": "The Outdoor Plus",
+                  "count": 1,
+                  "value": "The Outdoor Plus"
+                },
+                {
+                  "title": "Wildfire Outdoor Living",
+                  "count": 53,
+                  "value": "Wildfire Outdoor Living"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

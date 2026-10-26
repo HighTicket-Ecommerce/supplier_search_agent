@@ -12,6 +12,6 @@ gspread==6.1.2
 google-auth==2.33.0
 apify-client==1.8.1
 apify-shared==1.1.2
-streamlit
+streamlit==1.53.0
 pandas==2.2.2
 numpy==1.26.4

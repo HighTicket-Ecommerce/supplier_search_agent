@@ -1,0 +1,299 @@
+{
+  "source": "Saved official-page evidence and translated pilot responses. Model responses are mocked; not a live new-prompt accuracy score.",
+  "cases": [
+    {
+      "id": "homecraft_sauna_heaters",
+      "product": "Sauna heaters",
+      "pages": [
+        {
+          "url": "https://homecraftsaunas.com/about/",
+          "text": "# About Homecraft Saunas | Based in Surrey, BC\n\nAfter 33 years of steady growth, Homecraft entered a new era when ownership passed to David and Kyle Wilson — brothers with a lifelong connection to the company. Their father, Stewart, had been one of the original founders, and the return of Homecraft to the Wilson family marked a full-circle moment.\n\nReflecting on that journey, Kyle Wilson s",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/contact/",
+          "text": "# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form —\n# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is throu\n# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form — we respond best to email inquiries and onlin\nontact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form — we respond best to email inquiries and online form subm",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/become-a-dealer/",
+          "text": "# Become A Homecraft Saunas Dealer\n\n## Partner with North America’s Most Trusted Sauna Heater Manufacturer\n\nSince 1988, we’ve built strong partnerships with sauna dealers across North America who value quality, reliability, and responsive support. If you’re looking for a manufacturer that delivers exceptional products your customers can count on – without the delays and service issues of overseas brands – we’d love to work with you.\n\n[Apply Now](http\n-maple-leaf-brands-solid-full.svg)\n\n**Proudly Made in Canada**\n\nEvery heater is manufactured in our Surrey, BC, facility with nearly 40 years of expertise. Your customers get quality they can see and trust.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/cart-shopping-solid-full.svg)\n\n**Exclusive Dealer Portal**\n\nEasy online ordering, real-time inventory, pricing transparency, and order tracking – all in one streamlined platform.\n\n![](https\nsaunas.com/wp-content/uploads/2026/08/canadian-maple-leaf-brands-solid-full.svg)\n\n**Proudly Made in Canada**\n\nEvery heater is manufactured in our Surrey, BC, facility with nearly 40 years of expertise. Your customers get quality they can see and trust.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/cart-shopping-solid-full.svg)\n\n**Exclusive Dealer Portal**\n\nEasy online ordering, real-time inventory, pricing transparency, and order tracking\n# Become A Homecraft Saunas Dealer\n\n## Partner with North America’s Most Trusted Sauna Heater Manufacturer\n\nSince 1988, we’ve built strong partnerships with sauna dealers across North America who value quality, reliability, and responsive support. If you’re looking for a manufacturer that delivers exceptional products your customers can count on – without the delays and service issues of overseas brands – we’d love to work with you.\n\n[Appl\nmecraft dealer, you’ll gain access to wholesale pricing on premium Canadian-made sauna heaters, DIY sauna kits, and accessories that your customers will love. We’re not just a supplier, we’re a partner committed to your success.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/badge-percent-solid-full.svg)\n\n**Wholesale Pricing & Reliable Margins**\n\nCompetitive wholesale pricing that lets you build healthy profit margins while offering your cust",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/products/sauna-heaters/",
+          "text": "# Electric Sauna Heaters | 4kW-18kW\n\nProudly made in British Columbia, Homecraft sauna heaters are trusted by North America’s leading dealers for their quality, performance, and craftsmanship.",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        }
+      ],
+      "analysis": {
+        "is_product_company": true,
+        "company_name": "Homecraft",
+        "supplier_type": "Manufacturer",
+        "owns_brand": true,
+        "product_match": "supported",
+        "product_kind": "primary",
+        "matched_product_urls": [
+          "https://homecraftsaunas.com/products/sauna-heaters/"
+        ],
+        "country": "Canada",
+        "country_basis": "headquarters",
+        "identity_match": "not_requested",
+        "email": null,
+        "phone": null,
+        "confidence": 0.9,
+        "notes": "Official pages describe Homecraft as a sauna heater manufacturer, offer electric sauna heaters as products, and indicate the company is based in Surrey, British Columbia, Canada (allowed country). No pricing is shown in the provided evidence.",
+        "evidence": [
+          {
+            "claim": "country",
+            "source_url": "https://homecraftsaunas.com/about/",
+            "quote": "Based in Surrey, BC"
+          },
+          {
+            "claim": "role",
+            "source_url": "https://homecraftsaunas.com/become-a-dealer/",
+            "quote": "North America’s Most Trusted Sauna Heater Manufacturer"
+          },
+          {
+            "claim": "product_match",
+            "source_url": "https://homecraftsaunas.com/products/sauna-heaters/",
+            "quote": "Electric Sauna Heaters | 4kW-18kW"
+          },
+          {
+            "claim": "role",
+            "source_url": "https://homecraftsaunas.com/become-a-dealer/",
+            "quote": "Every heater is manufactured in our Surrey, BC, facility"
+          }
+        ]
+      },
+      "expected": "qualified"
+    },
+    {
+      "id": "homecraft_cold_plunge",
+      "product": "Complete cold plunge systems",
+      "pages": [
+        {
+          "url": "https://homecraftsaunas.com/about/",
+          "text": "# About Homecraft Saunas | Based in Surrey, BC\n\nAfter 33 years of steady growth, Homecraft entered a new era when ownership passed to David and Kyle Wilson — brothers with a lifelong connection to the company. Their father, Stewart, had been one of the original founders, and the return of Homecraft to the Wilson family marked a full-circle moment.\n\nReflecting on that journey, Kyle Wilson s",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/contact/",
+          "text": "# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form —\n# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is throu\n# Contact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form — we respond best to email inquiries and onlin\nontact Homecraft Saunas | Surrey, BC Sauna Manufacturer\n\nLooking for information on a Sauna heater, Sauna kit, Sauna Accessories or anything sauna related please let us know and we will promptly reply.\n\n## **We’re Here to Help**\n\nHave a question about our products or need help choosing the right sauna product? Our team is here to support you. The quickest way to reach us is through our contact form — we respond best to email inquiries and online form subm",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/become-a-dealer/",
+          "text": "# Become A Homecraft Saunas Dealer\n\n## Partner with North America’s Most Trusted Sauna Heater Manufacturer\n\nSince 1988, we’ve built strong partnerships with sauna dealers across North America who value quality, reliability, and responsive support. If you’re looking for a manufacturer that delivers exceptional products your customers can count on – without the delays and service issues of overseas brands – we’d love to work with you.\n\n[Apply Now](http\n-maple-leaf-brands-solid-full.svg)\n\n**Proudly Made in Canada**\n\nEvery heater is manufactured in our Surrey, BC, facility with nearly 40 years of expertise. Your customers get quality they can see and trust.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/cart-shopping-solid-full.svg)\n\n**Exclusive Dealer Portal**\n\nEasy online ordering, real-time inventory, pricing transparency, and order tracking – all in one streamlined platform.\n\n![](https\nsaunas.com/wp-content/uploads/2026/08/canadian-maple-leaf-brands-solid-full.svg)\n\n**Proudly Made in Canada**\n\nEvery heater is manufactured in our Surrey, BC, facility with nearly 40 years of expertise. Your customers get quality they can see and trust.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/cart-shopping-solid-full.svg)\n\n**Exclusive Dealer Portal**\n\nEasy online ordering, real-time inventory, pricing transparency, and order tracking\n# Become A Homecraft Saunas Dealer\n\n## Partner with North America’s Most Trusted Sauna Heater Manufacturer\n\nSince 1988, we’ve built strong partnerships with sauna dealers across North America who value quality, reliability, and responsive support. If you’re looking for a manufacturer that delivers exceptional products your customers can count on – without the delays and service issues of overseas brands – we’d love to work with you.\n\n[Appl\nmecraft dealer, you’ll gain access to wholesale pricing on premium Canadian-made sauna heaters, DIY sauna kits, and accessories that your customers will love. We’re not just a supplier, we’re a partner committed to your success.\n\n![](https://homecraftsaunas.com/wp-content/uploads/2026/08/badge-percent-solid-full.svg)\n\n**Wholesale Pricing & Reliable Margins**\n\nCompetitive wholesale pricing that lets you build healthy profit margins while offering your cust",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://homecraftsaunas.com/products/sauna-heaters/",
+          "text": "# Electric Sauna Heaters | 4kW-18kW\n\nProudly made in British Columbia, Homecraft sauna heaters are trusted by North America’s leading dealers for their quality, performance, and craftsmanship.",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        }
+      ],
+      "analysis": {
+        "is_product_company": true,
+        "company_name": "Homecraft",
+        "supplier_type": "Manufacturer",
+        "owns_brand": true,
+        "product_match": "not_established",
+        "product_kind": "unknown",
+        "matched_product_urls": [],
+        "country": "Canada",
+        "country_basis": "headquarters",
+        "identity_match": "not_requested",
+        "email": null,
+        "phone": null,
+        "confidence": 0.9,
+        "notes": "Official pages show Homecraft as a Surrey, BC (Canada) sauna heater manufacturer, but provided evidence does not mention complete cold plunge systems (tub + chiller).",
+        "evidence": [
+          {
+            "claim": "role",
+            "source_url": "https://homecraftsaunas.com/become-a-dealer/",
+            "quote": "Partner with North America’s Most Trusted Sauna Heater Manufacturer"
+          },
+          {
+            "claim": "country",
+            "source_url": "https://homecraftsaunas.com/about/",
+            "quote": "About Homecraft Saunas | Based in Surrey, BC"
+          },
+          {
+            "claim": "product_match",
+            "source_url": "https://homecraftsaunas.com/contact/",
+            "quote": "Looking for information on a Sauna heater, Sauna kit, Sauna Accessories"
+          }
+        ]
+      },
+      "expected": "review"
+    },
+    {
+      "id": "coldture_cold_plunge",
+      "product": "Complete cold plunge systems",
+      "pages": [
+        {
+          "url": "https://coldture.com/",
+          "text": "d, heat, and light._\n\nrecovery isn't a product, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) !\nct, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) ![Coldture recovery specialist](https://cdn.s\ned separately.\n\nwhat happens if something goes wrong?\n\nyou talk to us. coldture hq is in vaughan, ontario, and our support team is in-house rather than outsourced, so the person answering knows the equipment.\n\ncoverage runs 5 years on outdoor sauna shells, 2 years on red light panels, and 1 year on cold plunges, chillers and indoor saunas. if a third-party part is involved, we deal wit\ntely.\n\nwhat happens if something goes wrong?\n\nyou talk to us. coldture hq is in vaughan, ontario, and our support team is in-house rather than outsourced, so the person answering knows the equipment.\n\ncoverage runs 5 years on outdoor sauna shells, 2 years on red light panels, and 1 year on cold plunges, chillers and indoor saunas. if a third-party part is involved, we deal with the ma\n# Premium Saunas, Cold Plunges & Accessories – Coldture Wellness\n\n40,000+ customers\n\n_|_\n\nproudly Canadian\n\n_|_\n\ntrusted by NHL, NBA, UFC, Tennis Canada and Olympic teams\n\n_|_\n\nas seen on Dragons' Den\n\n_|_\n\navailable at Costco\n\n_|_\n\n## one company for _cold, heat, and light._\n\nrecovery isn't a product, it's a protocol. we're th\nght._\n\nrecovery isn't a product, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) ![Coldture",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/complete-sauna-vent-kit",
+          "text": "{\"title\": \"Complete Sauna Vent Kit\", \"vendor\": \"Coldture Wellness\", \"description\": \"The Sauna Vent Kit is an essential accessory designed to help regulate airflow and ventilation in your sauna. This kit includes a wooden panel and metal plates with perforated holes that are installed in the sauna walls. This allows for easy adjustment of airflow by rotating the wooden panel to cover or uncover the holes, allowing for better control over the temperature and humidity inside the sauna. Typically installed in two locations within the sauna, the vent kit helps maintain optimal air circulation, ensuring a comfortable and safe sauna experience.\", \"price\": 39.99, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/new-xtreme-plunge",
+          "text": "{\"title\": \"xtreme | plunge\", \"vendor\": \"Coldture Wellness\", \"description\": \"the xtreme outdoor cold plunge is built for serious cold therapy outdoors year round. a powerful integrated chiller and rugged construction deliver consistent, ice-free cold exposure at home, without seasonal setup or hassle, designed for permanent installation in demanding real climates. Outer Dims: 80\\\" x 40\\\" x 30\\\" Inner Dims: 47\\\" x 27\\\" x 27\\\"\", \"price\": 12999, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/pro-lite-red-light-panel",
+          "text": "{\"title\": \"PRO LITE | red light panel\", \"vendor\": \"Coldture Wellness\", \"description\": \"Half body Red Light Therapy Panel\", \"price\": 1499, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/outdoor-sauna-pro-installation-assembly-can",
+          "text": "{\"title\": \"pro outdoor sauna assembly in canada - (electrical excluded)\", \"vendor\": \"Coldture Wellness\", \"description\": \"Pro Outdoor Sauna Assembly, available in major metropolitan areas across Canada. Remote locations are not currently serviced reach out for more details. Electrical setup not included.\", \"price\": 1899.99, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/the-barrel-chiller-pro-bundle-regular",
+          "text": "{\"title\": \"VIP | Barrel + Chiller Pro\", \"vendor\": \"Coldture Wellness\", \"description\": \"ships october 12 everything you need for daily cold plunging. one box. zero extras to buy. barrel tub + chiller pro + premium care kit.\", \"price\": 4499, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        }
+      ],
+      "analysis": {
+        "is_product_company": true,
+        "company_name": "Coldture",
+        "supplier_type": "Brand owner",
+        "owns_brand": true,
+        "product_match": "supported",
+        "product_kind": "primary",
+        "matched_product_urls": [
+          "https://coldture.com/products/the-barrel-chiller-pro-bundle-regular"
+        ],
+        "country": "Canada",
+        "country_basis": "headquarters",
+        "identity_match": "not_requested",
+        "email": null,
+        "phone": null,
+        "confidence": 0.9,
+        "notes": "Official pages show Coldture HQ in Vaughan, Ontario (Canada) and describe the company as a Canadian brand engineering its products. Product pages explicitly include complete cold plunge systems with an integrated chiller or a tub+chiller bundle.",
+        "evidence": [
+          {
+            "claim": "country",
+            "source_url": "https://coldture.com/",
+            "quote": "coldture hq is in vaughan, ontario"
+          },
+          {
+            "claim": "role",
+            "source_url": "https://coldture.com/",
+            "quote": "we're the only Canadian brand engineering every part"
+          },
+          {
+            "claim": "product_match",
+            "source_url": "https://coldture.com/products/new-xtreme-plunge",
+            "quote": "a powerful integrated chiller"
+          },
+          {
+            "claim": "product_match",
+            "source_url": "https://coldture.com/products/the-barrel-chiller-pro-bundle-regular",
+            "quote": "barrel tub + chiller pro"
+          }
+        ]
+      },
+      "expected": "qualified"
+    },
+    {
+      "id": "coldture_gas_fireplaces",
+      "product": "Gas fireplaces",
+      "pages": [
+        {
+          "url": "https://coldture.com/",
+          "text": "d, heat, and light._\n\nrecovery isn't a product, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) !\nct, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) ![Coldture recovery specialist](https://cdn.s\ned separately.\n\nwhat happens if something goes wrong?\n\nyou talk to us. coldture hq is in vaughan, ontario, and our support team is in-house rather than outsourced, so the person answering knows the equipment.\n\ncoverage runs 5 years on outdoor sauna shells, 2 years on red light panels, and 1 year on cold plunges, chillers and indoor saunas. if a third-party part is involved, we deal wit\ntely.\n\nwhat happens if something goes wrong?\n\nyou talk to us. coldture hq is in vaughan, ontario, and our support team is in-house rather than outsourced, so the person answering knows the equipment.\n\ncoverage runs 5 years on outdoor sauna shells, 2 years on red light panels, and 1 year on cold plunges, chillers and indoor saunas. if a third-party part is involved, we deal with the ma\n# Premium Saunas, Cold Plunges & Accessories – Coldture Wellness\n\n40,000+ customers\n\n_|_\n\nproudly Canadian\n\n_|_\n\ntrusted by NHL, NBA, UFC, Tennis Canada and Olympic teams\n\n_|_\n\nas seen on Dragons' Den\n\n_|_\n\navailable at Costco\n\n_|_\n\n## one company for _cold, heat, and light._\n\nrecovery isn't a product, it's a protocol. we're th\nght._\n\nrecovery isn't a product, it's a protocol. we're the only Canadian brand engineering every part of it under one roof, designed to work together.\n\n![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/josh.webp?v=1786988957) ![Coldture recovery specialist](https://cdn.shopify.com/s/files/1/0622/1070/3606/files/6__7565.webp?v=1786652912) ![Coldture",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/complete-sauna-vent-kit",
+          "text": "{\"title\": \"Complete Sauna Vent Kit\", \"vendor\": \"Coldture Wellness\", \"description\": \"The Sauna Vent Kit is an essential accessory designed to help regulate airflow and ventilation in your sauna. This kit includes a wooden panel and metal plates with perforated holes that are installed in the sauna walls. This allows for easy adjustment of airflow by rotating the wooden panel to cover or uncover the holes, allowing for better control over the temperature and humidity inside the sauna. Typically installed in two locations within the sauna, the vent kit helps maintain optimal air circulation, ensuring a comfortable and safe sauna experience.\", \"price\": 39.99, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/new-xtreme-plunge",
+          "text": "{\"title\": \"xtreme | plunge\", \"vendor\": \"Coldture Wellness\", \"description\": \"the xtreme outdoor cold plunge is built for serious cold therapy outdoors year round. a powerful integrated chiller and rugged construction deliver consistent, ice-free cold exposure at home, without seasonal setup or hassle, designed for permanent installation in demanding real climates. Outer Dims: 80\\\" x 40\\\" x 30\\\" Inner Dims: 47\\\" x 27\\\" x 27\\\"\", \"price\": 12999, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/pro-lite-red-light-panel",
+          "text": "{\"title\": \"PRO LITE | red light panel\", \"vendor\": \"Coldture Wellness\", \"description\": \"Half body Red Light Therapy Panel\", \"price\": 1499, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/outdoor-sauna-pro-installation-assembly-can",
+          "text": "{\"title\": \"pro outdoor sauna assembly in canada - (electrical excluded)\", \"vendor\": \"Coldture Wellness\", \"description\": \"Pro Outdoor Sauna Assembly, available in major metropolitan areas across Canada. Remote locations are not currently serviced reach out for more details. Electrical setup not included.\", \"price\": 1899.99, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        },
+        {
+          "url": "https://coldture.com/products/the-barrel-chiller-pro-bundle-regular",
+          "text": "{\"title\": \"VIP | Barrel + Chiller Pro\", \"vendor\": \"Coldture Wellness\", \"description\": \"ships october 12 everything you need for daily cold plunging. one box. zero extras to buy. barrel tub + chiller pro + premium care kit.\", \"price\": 4499, \"currency\": \"CAD\"}",
+          "retrieved_at": 1791916000,
+          "text_sha256": "captured-fixture"
+        }
+      ],
+      "analysis": {
+        "is_product_company": true,
+        "company_name": "Coldture",
+        "supplier_type": "Brand owner",
+        "owns_brand": true,
+        "product_match": "not_established",
+        "product_kind": "unknown",
+        "matched_product_urls": [],
+        "country": "Canada",
+        "country_basis": "headquarters",
+        "identity_match": "not_requested",
+        "email": null,
+        "phone": null,
+        "confidence": 0.9,
+        "notes": "Official pages show Coldture sells wellness products (saunas, cold plunges, chillers, red light panels) and states its HQ is in Vaughan, Ontario (Canada). No evidence in the provided pages mentions gas fireplaces, so product match cannot be confirmed for the requested product.",
+        "evidence": [
+          {
+            "claim": "role",
+            "source_url": "https://coldture.com/",
+            "quote": "we're the only Canadian brand engineering every part"
+          },
+          {
+            "claim": "country",
+            "source_url": "https://coldture.com/",
+            "quote": "coldture hq is in vaughan, ontario"
+          },
+          {
+            "claim": "product_match",
+            "source_url": "https://coldture.com/",
+            "quote": "Premium Saunas, Cold Plunges & Accessories"
+          }
+        ]
+      },
+      "expected": "review"
+    }
+  ]
+}
