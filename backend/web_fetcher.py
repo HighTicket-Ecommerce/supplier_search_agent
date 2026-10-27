@@ -347,7 +347,9 @@ def prompt_pages(pages, product, *, countries=None, extra_terms=None):
         product_windows = _windows(text, config, limit=60) + _windows(text, product_pattern, limit=60)
         product_windows.sort(key=lambda s: (-(sum(term in s.casefold() for term in specific) + 2*bool(re.search(config, s, re.I))), -len(s)))
         add(product_windows, 5)
-        add(_windows(text, r"manufactur\w*|own brand|engineer\w*|our brand|we design", after=500), 2)
+        add(_windows(text, r"manufactur\w*|own brand|engineer\w*|our brand|we design|brand owner|"
+                     r"\b(?:we|\w+) (?:distribute|distributes|supply third[ -]party)|authorized distributor|"
+                     r"\b(?:retailer|reseller|marketplace|publisher)\b", after=500), 2)
         add(_windows(text, r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", after=180), 1)
         if country:
             add(_windows(text, "|".join(country), after=400), 1)
