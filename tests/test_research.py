@@ -297,6 +297,14 @@ class ResearchTests(unittest.TestCase):
                   "quote":"We\u2019re a Surrey, BC manufacturer"}]
         pages[0]["text"] = "We're a Surrey, BC manufacturer of heaters."
         self.assertTrue(supplier_validator.validate_evidence(curly, pages)[1])
+        pages[0]["text"] = "Born in California. We manufacture sauna heaters."
+        origin = [
+            {"claim":"country","source_url":"https://fixture.example/about","quote":"Born in California."},
+            {"claim":"role","source_url":"https://fixture.example/about","quote":"We manufacture sauna heaters."},
+        ]
+        kept, ok = supplier_validator.validate_evidence(origin, pages)
+        self.assertTrue(ok)
+        self.assertEqual([e["claim"] for e in kept], ["role"])
 
     def test_limits_stop_before_paid_calls(self):
         context = self.context(max_execution_cost_usd=0.5, max_external_calls=1, max_pages=1)
