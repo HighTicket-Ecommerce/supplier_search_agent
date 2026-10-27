@@ -2,7 +2,7 @@ import hashlib
 from html.parser import HTMLParser
 import re
 import time
-from urllib.parse import urljoin, urlsplit, urldefrag
+from urllib.parse import urljoin, urlsplit, urldefrag, unquote
 
 from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
@@ -103,11 +103,19 @@ def _page_priority(url, product, label=""):
         if not product_path and not collection_path:
             tier = 2
         if re.search(r"complete|system", product, re.I) and re.search(r"cold|plunge", product, re.I):
-            component = re.search(r"chiller|tubs?-only|accessor|filters?|covers?|dry-mat|chemical|cleaner|hoses?|steps", path)
+            # "All-in-one plunge filter" names an accessory, even with system keywords.
+            # Inspect the item slug/label, not a parent collection or included extras.
+            names = [re.sub(r"[-_]+", " ", unquote(name).casefold())
+                     for name in (product, path.rstrip("/").rsplit("/", 1)[-1], label)]
+            heads = [re.split(r"\b(?:with|including|includes?)\b", name, maxsplit=1)[0] for name in names]
+            accessory_pattern = r"\b(?:accessor(?:y|ies)|filters?|covers?|(?:dry )?mats?|chemicals?|cleaners?|hoses?|steps?)\b"
+            accessory = not re.search(accessory_pattern, heads[0]) and any(
+                re.search(accessory_pattern, name) for name in heads[1:])
+            component = re.search(r"chiller|tubs?-only", path)
             complete = re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
-            if component and not complete:
+            if accessory or (component and not complete):
                 tier += 4
-            if complete and hits:
+            elif complete and hits:
                 tier -= 1
         return (2, tier, -hits)
     if re.search(r"dealer|wholesale", path):
