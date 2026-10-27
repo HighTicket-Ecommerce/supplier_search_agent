@@ -99,24 +99,24 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 
 First category: **complete cold-plunge systems, with supplier headquarters in the United States or Canada**. Labelling can start now; agent runs wait for Steps 2–4.
 
-- [ ] Write down the exact brief: permitted company roles, exclusions and required product contents. A complete system must include a tub and chiller, or an integrated chiller. Dealer-program evidence is useful but optional.
-- [ ] Select 20–30 sites covering genuine suppliers, accessories/components, installation services, unrelated businesses and ambiguous identities.
-- [ ] Keep previously tested examples such as Homecraft and Coldture as regression anchors; identify them separately from new evaluation sites.
-- [ ] Before reading agent decisions, manually label each site's product fit, company role, headquarters evidence and expected master-list relationship (existing, related domain, name only, same name on a different website, or unmatched). Save official URLs, quotes and review dates. Missing evidence stays unknown.
-- [ ] Split new sites into a development group and an untouched final-check group. Freeze the labels and brief before running the agent.
-- [ ] Save a versioned benchmark manifest and labels. Keep private source lists and contacts out of public fixtures.
+- [x] Write down the exact brief: permitted company roles, exclusions and required product contents. A complete system must include a tub and chiller, or an integrated chiller. Dealer-program evidence is useful but optional.
+- [x] Select 24 sites covering genuine suppliers, chillers-and-complete-systems, unrelated businesses, overseas headquarters and blocked hosts.
+- [x] Keep Homecraft and Coldture as regression anchors, separate from new evaluation sites.
+- [x] Before reading agent decisions, manually label each site's product fit, company role, headquarters evidence and expected master-list relationship. Official URLs, quotes and the 2026-10-27 review date are in the labels file. Missing evidence stays unknown.
+- [x] Split new sites into a 14-site development group and an 8-site untouched final-check group. Labels and brief were frozen before any agent run.
+- [x] Save the versioned benchmark under `docs/benchmarks/cold-plunge-2026-10-27/`. No private contacts were copied.
 
 **Done when:** each case has an evidence-backed expected outcome, or an explicit unknown/review label. A master CSV country field alone is insufficient headquarters evidence.
 
 ## Step 6 — test qualification on supplied sites
 
-- [ ] Record the merged commit used for benchmark runs so results can be reproduced.
-- [ ] Run the benchmark sites in small, seed-only batches with additional discovery disabled and preview-only enabled.
-- [ ] Use an isolated evaluation job database; preserve existing application jobs and source files.
-- [ ] Keep page, call, runtime and provider charge caps enabled. Record the settings before each batch, including any changes needed after a limit stops a job.
-- [ ] Test company qualification first, then enable catalogue analysis on selected product/variant cases to measure its additional benefit and cost.
-- [ ] Save job IDs, request settings, source timestamps/hashes, actor run/build/dataset IDs, model identity, decisions and reasons.
-- [ ] Record stopped, limited, unprocessed and extraction-failed cases separately. They must not silently become negative supplier labels.
+- [x] Record the local commit used for benchmark runs (`ae3439b` on `fix/master-matching`).
+- [x] Run the benchmark sites in small, seed-only batches with additional discovery disabled and preview-only enabled. First 8-site batch hit the $8 reservation cap; later batches used 2 pages/site and $10.
+- [x] Use an isolated evaluation job database; preserve existing application jobs and source files.
+- [x] Keep page, call, runtime and provider charge caps enabled. Record the settings before each batch, including any changes needed after a limit stops a job.
+- [ ] Test company qualification first, then enable catalogue analysis on selected product/variant cases to measure its additional benefit and cost. Qualification-only so far.
+- [x] Save job IDs, request settings and decisions under `var/eval/` and the summary in the results report.
+- [x] Record stopped, limited, unprocessed and extraction-failed cases separately. They must not silently become negative supplier labels.
 
 **Done when:** every selected case has either a saved decision or a documented execution limitation. No Sheets writes are needed for this phase.
 
@@ -189,5 +189,6 @@ These are initial acceptance targets, not measured results or statistical guaran
 | 2026-10-26 | Step 2 on local branch `fix/api-and-export-safety` (based on the baseline commit `f1e5b38`) | 52 tests passed (4 new: API key before body parsing, 503 without a configured key, formula-safe CSV, UI password and rejected-key message). Railway variables still to set |
 | 2026-10-27 | Step 3 on local branch `fix/dependency-security` | 53 tests passed on upgraded packages; OpenAI schemas unchanged; `pip-audit` clean. CI workflow added (read-only, hash-pinned actions). Unused Apify SDK, tenacity, BeautifulSoup and three unused files removed |
 | 2026-10-27 | Step 4 on local branch `fix/master-matching` | 56 tests passed. 2,000-row profile: shop-host + " Inc." → 2,000 `related_domain_needs_verification`; same host + " Inc." → 1,996 existing (was 1,997 name conflicts); same name on another site → 1,998 `name_match_different_website`. `fellowes.com` and `championtarget.com` no longer blocked. Four remaining blocked master hosts are actual retailers |
+| 2026-10-27 | Cold-plunge benchmark labelled and run | [Results](docs/benchmarks/cold-plunge-2026-10-27/results.md). 24 sites, seed-only, preview-only. Precision 1/1; coverage 1/14 eligible. Did not pass. No PRs. No Sheets writes |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.
