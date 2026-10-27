@@ -75,10 +75,11 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 
 ## Step 3 — dependency security and CI (branch `fix/dependency-security`)
 
-- [ ] Add a GitHub Actions workflow with read-only permissions, actions pinned to commit hashes and no secrets. It runs the offline suite and `pip-audit`.
-- [ ] Upgrade packages with published advisories (Starlette through FastAPI, Streamlit, requests, python-dotenv) and require `certifi>=2026.10.19`, which removes the compromised eMudhra roots.
-- [ ] Remove unused packages (`tenacity`, `beautifulsoup4`, `apify-client`, `apify-shared`) and unused files (`backend/intent_agent.py`, `backend/brand_utils.py`, `prompt/extract_supplier.md`).
-- [ ] Confirm the OpenAI structured-output schemas are unchanged after the upgrade.
+- [x] Add a GitHub Actions workflow with read-only permissions, actions pinned to commit hashes and no secrets. It runs the offline suite and `pip-audit`.
+- [x] Upgrade packages with published advisories (FastAPI 0.162.0 / Starlette 1.10.0, Streamlit 1.66.1, requests 2.34.2, python-dotenv 1.2.4) and require `certifi>=2026.10.19`. NumPy is 2.2.6 because Streamlit's pyarrow no longer imports on 1.26.
+- [x] Remove unused packages (`tenacity`, `beautifulsoup4`, `apify-client`, `apify-shared`) and unused files (`backend/intent_agent.py`, `backend/brand_utils.py`, `prompt/extract_supplier.md`).
+- [x] Confirm the OpenAI structured-output schemas are unchanged after the upgrade.
+- [ ] Push and open the pull request when allowed; merge after your approval. Recreate `.venv` from `requirements.txt` after this lands.
 
 **Done when:** the suite passes on the upgraded packages and `pip-audit` reports no known vulnerabilities.
 
@@ -185,5 +186,6 @@ These are initial acceptance targets, not measured results or statistical guaran
 | 2026-10-26 | Master-list comparison profiled on 2,000 real master rows | Known supplier on a subdomain with " Inc." added to its name: 1,997 reported as unmatched (new). Same website with " Inc.": 1,997 name conflicts. Same name on an unrelated website and on a sub-site get the same label. `fellowes.com` and `championtarget.com` blocked as retailers. Skipped candidates leave no record |
 | 2026-10-26 | Plan reorganized; baseline committed locally on `feat/supplier-research-controls` | 48 tests passed; branch renamed from `codex/`; pull request pending because PRs are on hold |
 | 2026-10-26 | Step 2 on local branch `fix/api-and-export-safety` (based on the baseline commit `f1e5b38`) | 52 tests passed (4 new: API key before body parsing, 503 without a configured key, formula-safe CSV, UI password and rejected-key message). Railway variables still to set |
+| 2026-10-27 | Step 3 on local branch `fix/dependency-security` | 53 tests passed on upgraded packages; OpenAI schemas unchanged; `pip-audit` clean. CI workflow added (read-only, hash-pinned actions). Unused Apify SDK, tenacity, BeautifulSoup and three unused files removed |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.
