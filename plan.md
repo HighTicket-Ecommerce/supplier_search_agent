@@ -4,7 +4,7 @@ Updated: 2026-10-27
 
 **Goal:** find more relevant suppliers, verify the requested products and company identities, and produce useful evidence with predictable research costs.
 
-**Current phase:** evidence-collection/HQ fixes are locally validated on `fix/evidence-collection-and-hq`; all 80 offline tests pass. Coldture and Sun Home qualified in targeted live checks; BlueCube's saved address evidence passed an offline replay; Plunge stayed in review. [Detailed results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). Pull requests/deployment remain on hold. Next: the remaining development cases, then discovery/catalogue evaluation and fresh independent final cases.
+**Current phase:** all 16 development/anchor cases were rerun on fixed commit `480d5b6` on `fix/evidence-collection-and-hq`: four qualified, eleven review and one fetch retry. Frozen-label qualification coverage improved from 1/6 to 4/6 (67%), below target. BlueCube's contact/workshop address still needs manual HQ review; only three automatic qualifications have clear HQ/office support on inspection. [Complete results](docs/benchmarks/cold-plunge-2026-10-27/development-rerun-results.md). The last offline suite passed all 80 tests; application code stayed unchanged during the rerun. Pull requests/deployment remain on hold. Next: accessory-page ranking, location types and claim semantics, then bounded fetch fallback, discovery/catalogue evaluation and fresh independent final cases.
 
 ## Already completed
 
@@ -133,12 +133,12 @@ First category: **complete cold-plunge systems, with supplier headquarters in th
 
 ## Step 8 — score the results
 
-- [ ] Report qualified precision: manually confirmed eligible suppliers / all automatically qualified suppliers.
-- [ ] Report qualification coverage against cases labelled `expected_status=qualified`. Separately report relevant product suppliers whose headquarters/role remain unknown and correctly need review. Show how much of each cohort was evaluated.
-- [ ] Count eligible suppliers left in review, incorrect exclusions, extraction failures, duplicate qualified companies and uncertain master matches.
-- [ ] Compare each candidate's master-list status with its label: wrong merges, labelled master suppliers reported as new, and candidates skipped or blocked by mistake.
+- [x] Report development qualified precision: 4/4 match frozen commercial-eligibility labels, but only 3/4 have clear HQ/office support on inspection; BlueCube needs manual review. This does not establish production precision.
+- [x] Report development qualification coverage against `expected_status=qualified`: 4/6 (67%) frozen-label coverage, or 3/6 with clear HQ/office evidence; all 16 development/anchor cases attempted. Separately report relevant review cases and the extraction failure.
+- [x] Count eligible suppliers left in review, incorrect exclusions, extraction failures, duplicate qualified companies and uncertain master matches for the development cohort.
+- [x] Compare development master-list outcomes: all 16 known hosts recognized; eleven existing-domain matches and five unresolved name conflicts. No silent drops or wrong automatic merges observed.
 - [ ] Check product/variant relevance, literal source quotes, explicit currencies and price-sample coverage.
-- [ ] Record elapsed time, reported actor charges, estimated model cost, conservative reservations and cost per manually confirmed qualified supplier as distinct values.
+- [x] Record development elapsed time, reported actor charges, estimated model cost, conservative reservations and cost per qualified supplier, distinguishing frozen labels from inspected HQ support. Approximately $0.324 combined execution for this rerun.
 - [ ] Show counts alongside percentages and score the untouched final-check group separately.
 
 Initial quality targets to assess on the labelled cohort:
@@ -165,7 +165,12 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 - [x] Capture navigation/footer HTML anchors separately, follow observed company/product links within existing limits, and preserve contiguous heading/value and product-configuration windows.
 - [x] Require affirmative company-location/office context. Reject shipping, warehouse, showroom, customer, origin/founding and negated location statements; retain diagnostics for failed quotes.
 - [x] Complete targeted development previews and record both improvements and review cases, including BlueCube's source-checked address-quote replay. [Results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). Qualification requirements remain in force.
-- [ ] Rerun the remaining development cases (including Redwood, Penguin and LeisureCraft) before claiming full benchmark coverage.
+- [x] Rerun the remaining development cases and refresh all four prior controls on fixed commit `480d5b6`. [Full development results](docs/benchmarks/cold-plunge-2026-10-27/development-rerun-results.md): four qualified, eleven review, one retry. No full/final benchmark pass claimed.
+- [ ] Penalize replacement-filter/accessory links that contain strong complete-system keywords; replay Penguin's saved navigation before paid retesting.
+- [ ] Separate HQ/office from workshop/factory/showroom locations; keep BlueCube in manual HQ review and improve LeisureCraft's address-quote selection.
+- [ ] Validate claim meaning as well as literal text: complete-system configuration and role evidence must support their structured verdicts.
+- [ ] Test bounded browser fallback for Morozko's provider response timeout, recording its additional cost separately.
+- [ ] Adjudicate ambiguous HQ/product labels in a new version; preserve this frozen benchmark and its results.
 - [ ] Add evidence-backed aliases and parent/brand relationships where identity mismatches recur; retain separate identities unless a relationship is verified.
 - [ ] Improve catalogue coverage or add platform/directory adapters where current extraction misses relevant products or brands.
 - [ ] Add regression cases for each concrete failure and rerun affected checks.
@@ -199,5 +204,6 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 | 2026-10-27 | HQ pages and per-claim quotes on `fix/hq-pages-and-quotes` | About/contact/FAQ ranked above product paths. HQ excerpts follow the brief countries. One bad quote no longer voids the rest. Origin “born in / made in” quotes are not HQ. 58 tests passed |
 | 2026-10-27 | Development rerun after HQ/quote fixes | [Results](docs/benchmarks/cold-plunge-2026-10-27/results.md). Precision 1/1; coverage 1/11 eligible development+anchor sites. Coldture HQ now verified; Plunge no longer false-qualifies. Final-check not rerun. No PRs |
 | 2026-10-27 | Evidence collection and contextual HQ validation on `fix/evidence-collection-and-hq` | [Targeted results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). 80 tests pass. Coldture/Sun Home qualified live; BlueCube qualified in saved-evidence replay after safe address shortening; Plunge stayed in review. All debugging/preview execution approximately $0.234. No final-check runs, PRs or Sheets writes |
+| 2026-10-27 | All 16 development/anchor cases rerun on unchanged `480d5b6` | [Complete results](docs/benchmarks/cold-plunge-2026-10-27/development-rerun-results.md). Four qualified, eleven review, one retry; frozen-label coverage 4/6 versus 1/6 previously. BlueCube needs manual HQ review, leaving three clear HQ/office qualifications. Penguin picked a filter; LeisureCraft chose manufacturing over its captured address; Morozko timed out. 46 actor runs + 15 model calls, approximately $0.324 combined execution, all actor runs terminal. No final-check runs, exports, PRs or deployment |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.

@@ -1,5 +1,7 @@
 # Evidence collection and headquarters checks — 2026-10-27
 
+Latest follow-up: [complete 16-case development rerun on fixed commit `480d5b6`](development-rerun-results.md). Four qualified, eleven review, one fetch retry; BlueCube's HQ remains a manual-review issue. This document preserves the earlier targeted development history.
+
 Local branch: `fix/evidence-collection-and-hq`, based on `0726ee0`.
 
 The targeted checks now collect useful product and headquarters evidence for Coldture and Sun Home. The original shipping-as-headquarters failure is blocked. BlueCube's valid address passes a saved-response replay after deterministic quote shortening. Plunge remains in review for missing headquarters evidence. This is development validation, not a pass of the complete supplier benchmark.
