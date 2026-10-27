@@ -5,7 +5,7 @@ Those still require the supplier analysis and its official source.
 """
 import re
 import unicodedata
-from urllib.parse import urlsplit
+from bisect import bisect_right
 from backend.location_text import SELF_LOCATION_RE, NEGATION, ambiguous_shared_location, shared_headquarters
 
 
@@ -20,15 +20,17 @@ def normalize_quote(value):
 _NEGATION = NEGATION
 _NEGATED = re.compile(r"\b" + _NEGATION + r"\b.{0,35}\b(?:based|located|headquartered|headquarters|hq|office)\b|"
                       r"\b(?:headquarters|hq|office)\b.{0,20}\b" + _NEGATION + r"\b", re.I)
-_NON_LOCATION = re.compile(r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|"
-                           r"warehouse|showroom|factory|factories|distribution cent(?:er|re)|"
-                           r"fulfil(?:l)?ment|service area|customer|testimonial)\b|"
-                           r"\b(?:your|enter (?:an?|your))\s+(?:office\s+)?address\b", re.I)
-_OTHER_SITE = re.compile(r"\b(?:warehouse|showroom|factory|factories|distribution cent(?:er|re)|"
-                         r"fulfil(?:l)?ment|customer|testimonial|dealer)\b", re.I)
+_SITE_TYPES = [(kind, re.compile(pattern, re.I)) for kind, pattern in [
+    ("shipping_or_returns", r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|service area)\b|\b(?:your|enter (?:an?|your))\s+(?:office\s+)?address\b"),
+    ("customer_or_dealer", r"\b(?:customer|testimonial|dealer)\b"),
+    ("workshop", r"\bworkshops?\b"),
+    ("factory", r"\b(?:factory|factories|manufacturing facility|production facility)\b"),
+    ("warehouse", r"\b(?:warehouse|distribution cent(?:er|re)|fulfil(?:l)?ment)\b"),
+    ("showroom", r"\bshowrooms?\b"),
+]]
 _ORIGIN = re.compile(r"\b(?:born|founded|started|established|originated|assembled|made|handcrafted|manufactured|built|produced|engineered|tested)\b"
                      r".{0,30}\b(?:in|at)\b", re.I)
-_HEAD_OFFICE = re.compile(r"\b(?:headquarters|hq|head office|registered office|office address)\b", re.I)
+_HEAD_OFFICE = re.compile(r"\b(?:headquarters|hq|head office)\b", re.I)
 _BASED = re.compile(r"\b(?:based|headquartered|located|situated)\s+(?:just\s+)?(?:in|near|outside|at)\s+"
                     r"[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,70}", re.I)
 _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,40},\s*"
@@ -36,71 +38,100 @@ _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,
 _STREET = re.compile(r"\b\d{1,6}\s+[A-Za-z0-9 .'\-]{1,70}\b"
                     r"(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|boulevard|blvd|line|court|ct|place|pl)\b", re.I)
 _SELF_LOCATION = SELF_LOCATION_RE
-_OFFICE_CONTEXT = re.compile(r"\b(?:our office|office address|headquarters|hq|head office|contact (?:us|[A-Z][\w -]+)|"
-                              r"company address|business address)\b", re.I)
+_OFFICE_CONTEXT = re.compile(r"\boffice(?: address)?\b(?!\s+(?:hours|phone|email|number|supplies))", re.I)
+_NAMED_LOCATION = re.compile(r"(?:\b(?:in|at|near|outside)\s+|:\s*)"
+                             r"(?!(?:our|the|your|this|that|a|an|person|us)\b)[A-Za-z]{2,}", re.I)
+HQ_LOCATION_TYPES = {"headquarters", "office", "company_base"}
+
+
+def _site_kind(text):
+    return next((kind for kind, pattern in _SITE_TYPES if pattern.search(text)), None)
+
+
+def _location_label(text):
+    # Only nearby label/value blocks may lend context to a clipped location quote.
+    if len(text) > 80 or len(text.split()) > 8 or _STREET.search(text) or _CITY_REGION.search(text):
+        return False
+    return bool(_site_kind(text) or _HEAD_OFFICE.search(text) or _OFFICE_CONTEXT.search(text))
 
 
 def _contexts(quote, source):
     needle = normalize_quote(quote)
-    found = False
-    for paragraph in re.split(r"\n\s*\n", source):
-        paragraph = normalize_quote(paragraph)
-        for match in re.finditer(re.escape(needle), paragraph, re.I):
-            found = True
-            # A heading or shipping sentence elsewhere on a page cannot authorize or void a quote.
-            before = re.split(r"[.!?]\s+", paragraph[max(0, match.start()-140):match.start()])[-1]
-            after = re.split(r"[.!?]\s+", paragraph[match.end():min(len(paragraph), match.end()+100)])[0]
-            yield before + paragraph[match.start():match.end()] + after
-    if not found:
-        # Tables/cards often put "Headquarters" and its city in adjacent HTML blocks.
-        # The whole quote must still be a contiguous match after whitespace normalization.
-        normalized = normalize_quote(source)
-        for match in re.finditer(re.escape(needle), normalized, re.I):
-            yield normalized[max(0, match.start()-140):min(len(normalized), match.end()+100)]
+    blocks = [value for part in re.split(r"\n\s*\n", source) if (value := normalize_quote(part))]
+    starts, offset = [], 0
+    for block in blocks:
+        starts.append(offset)
+        offset += len(block) + 1
+    normalized = " ".join(blocks)
+    for match in re.finditer(re.escape(needle), normalized, re.I):
+        first = bisect_right(starts, match.start()) - 1
+        last = bisect_right(starts, match.end() - 1) - 1
+        prefix = []
+        # An earlier address or an unrelated paragraph separates location cards.
+        for previous in reversed(blocks[max(0, first-3):first]):
+            if _location_label(previous):
+                prefix.insert(0, previous)
+                break
+            if (len(previous) > 100 or not (_STREET.search(previous) or _CITY_REGION.search(previous))
+                    or (_STREET.search(needle) and _STREET.search(previous))
+                    or (_CITY_REGION.search(needle) and _CITY_REGION.search(previous))):
+                break
+            prefix.insert(0, previous)
+        begin = max(starts[first], match.start()-140)
+        end = min(starts[last]+len(blocks[last]), match.end()+300)
+        yield " ".join(prefix + [normalized[begin:end]])
+
+
+def location_quote_kind(quote, source="", source_url=""):
+    """Classify a literal location passage; a Contact/About URL grants no location type."""
+    quote = normalize_quote(quote)
+    if not quote or _NEGATED.search(quote) or ambiguous_shared_location(quote):
+        return "unknown"
+    if shared_headquarters(quote):
+        return "headquarters"
+    if kind := _site_kind(quote):
+        return kind
+    explicit_hq, explicit_office = bool(_HEAD_OFFICE.search(quote)), bool(_OFFICE_CONTEXT.search(quote))
+    if _ORIGIN.search(quote) and not (explicit_hq or explicit_office):
+        return "manufacturing_origin"
+    has_value = bool(_CITY_REGION.search(quote) or _STREET.search(quote) or
+                     ((explicit_hq or explicit_office) and _NAMED_LOCATION.search(quote)))
+    contexts = _contexts(quote, source) if source else [quote]
+    rejected_kind = "unknown"
+    for context in contexts:
+        if _NEGATED.search(context) or ambiguous_shared_location(context):
+            continue
+        prefix = context.casefold().split(quote.casefold(), 1)[0]
+        # Check the subject before accepting a clipped "based in" or address quote.
+        if kind := _site_kind(prefix):
+            rejected_kind = kind
+            continue
+        if has_value and (explicit_hq or explicit_office):
+            return "headquarters" if explicit_hq else "office"
+        if has_value and (_HEAD_OFFICE.search(prefix) or _OFFICE_CONTEXT.search(prefix)):
+            return "headquarters" if _HEAD_OFFICE.search(prefix) else "office"
+        if _BASED.search(quote) or _SELF_LOCATION.search(quote):
+            return "company_base"
+        if kind := _site_kind(context):
+            rejected_kind = kind
+        elif _ORIGIN.search(context):
+            rejected_kind = "manufacturing_origin"
+    return rejected_kind
 
 
 def hq_quote_acceptable(quote, source="", source_url=""):
-    quote = normalize_quote(quote)
-    shared_hq = shared_headquarters(quote)
-    if not quote or (_NON_LOCATION.search(quote) and not shared_hq) or _NEGATED.search(quote) or ambiguous_shared_location(quote):
-        return False
-    explicit_hq = bool(_HEAD_OFFICE.search(quote))
-    if _ORIGIN.search(quote) and not explicit_hq:
-        return False
-    contexts = list(_contexts(quote, source)) if source else [quote]
-    contact_page = bool(re.search(r"(?:contact|about|company|our-story|location)", urlsplit(source_url).path, re.I))
-    for context in contexts:
-        # A clipped quote from "not based in" or a warehouse/shipping address is not HQ proof.
-        if _NEGATED.search(context) or ambiguous_shared_location(context):
-            continue
-        if not explicit_hq:
-            if _OTHER_SITE.search(context):
-                continue
-            if not _BASED.search(quote) and not _SELF_LOCATION.search(quote) and (_NON_LOCATION.search(context) or _ORIGIN.search(context)):
-                continue
-            prefix = context.casefold().split(quote.casefold(), 1)[0]
-            if _NON_LOCATION.search(prefix):
-                continue
-        if explicit_hq:
-            # A heading alone ("Our HQ") contains no location; require a location in the quote.
-            tail = _HEAD_OFFICE.sub("", quote).strip(" :|-#")
-            if _CITY_REGION.search(quote) or _STREET.search(quote) or re.search(
-                    r"\b(?:in|at|near|outside)\s+[A-Za-z]{2,}|:\s*[A-Za-z]{2,}", quote, re.I):
-                return True
-            if tail and tail.casefold() not in {"our", "the", "is", "are", "address"} and _CITY_REGION.search(context):
-                return True
-        if _BASED.search(quote) or _SELF_LOCATION.search(quote):
-            return True
-        if _STREET.search(quote) and (contact_page or _OFFICE_CONTEXT.search(context)):
-            return True
-        if _CITY_REGION.search(quote) and _OFFICE_CONTEXT.search(context):
-            return True
-    return False
+    return location_quote_kind(quote, source, source_url) in HQ_LOCATION_TYPES
+
+
+def has_address_lead(text):
+    # Routing only. Even a literal address cannot qualify without its own office/HQ context.
+    return bool(_STREET.search(normalize_quote(text)))
 
 
 def has_company_location(text, source_url=""):
     # Only a routing hint. Qualification always validates the actual model quote separately.
     for line in re.split(r"\n+|(?<=[.!?])\s+(?=[A-Z])", text):
-        if hq_quote_acceptable(line[:250], text, source_url):
+        if (_HEAD_OFFICE.search(line) or _OFFICE_CONTEXT.search(line) or _BASED.search(line)
+                or _SELF_LOCATION.search(line) or _STREET.search(line) or _CITY_REGION.search(line)) and hq_quote_acceptable(line[:250], text, source_url):
             return True
     return False

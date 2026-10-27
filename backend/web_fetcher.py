@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlsplit, urldefrag, unquote
 from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
 from backend.filters import is_blocked_domain
-from backend.location_evidence import has_company_location
+from backend.location_evidence import has_address_lead, has_company_location
 from backend.utils import domain_from_url, normalize_url, is_search_destination
 from backend.research_context import JobStopped, LimitReached
 from backend.product_brief import positive_brief
@@ -253,7 +253,8 @@ def fetch_website_pages(base_url, context):
         # A footer city is a location lead, not HQ proof. Contact can establish office context.
         cues = [re.escape(cue) for country in context.request.allowed_countries
                 for cue in COUNTRY_LOCATION_CUES.get(country, [country])]
-        location_hint = bool(cues) and any(re.search(r",\s*(?:"+"|".join(cues)+r")\b", p["text"], re.I) for p in pages)
+        location_hint = any(has_address_lead(p["text"]) for p in pages) or (
+            bool(cues) and any(re.search(r",\s*(?:"+"|".join(cues)+r")\b", p["text"], re.I) for p in pages))
         kinds = {c["kind"] for c in candidates.values()}
         if needs_hq and "hq" in kinds and ("hq" not in attempted_kinds or "product" in attempted_kinds):
             preferred = "hq"
