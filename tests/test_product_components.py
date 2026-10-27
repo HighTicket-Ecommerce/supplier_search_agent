@@ -126,6 +126,18 @@ class ProductComponentTests(unittest.TestCase):
             text="Recommended standalone chillers\n\nMini chiller module\n\nIncludes a chiller")
         self.assert_component_review(row)
 
+    def test_quote_spanning_separate_product_cards_cannot_combine_their_contents(self):
+        row = self.check_supplier(["Includes a tub Chiller kit Includes a chiller"],
+            url="https://example.com/collections/plunges", title="Cold Plunge Range",
+            text="Tub only\n\nIncludes a tub\n\nChiller kit\n\nIncludes a chiller")
+        self.assert_component_review(row)
+
+    def test_general_catalogue_component_list_does_not_establish_one_configuration(self):
+        for quote in ["Our catalogue includes tubs and chillers", "Our catalogue includes tubs and integrated chillers"]:
+            with self.subTest(quote=quote):
+                row = self.check_supplier([quote], url="https://example.com/collections/plunges", title="Cold Plunge Range")
+                self.assert_component_review(row)
+
     def test_explicit_complete_option_is_not_voided_by_a_separate_tub_only_option(self):
         quote = "Complete bundle includes a tub and chiller"
         row = self.check_supplier([quote], text="Basic tub: chiller sold separately.\n\n" + quote + ".")

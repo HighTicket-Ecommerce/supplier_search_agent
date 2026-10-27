@@ -27,6 +27,8 @@ _CHILLER_PART = re.compile(
     r"\b(?:compartment|housing)\b.{0,45}\bchiller\b", re.I)
 _RELATED = re.compile(r"\b(?:related|recommended|accessories|standalone|components?|module)\b", re.I)
 _ACCESSORY_TITLE = re.compile(r"\b(?:filters?|covers?|hoses?|compartments?|accessor(?:y|ies)|components?|modules?)\b", re.I)
+_CATALOGUE_LIST = re.compile(r"\b(?:catalog(?:ue)?|product range|product list|our range)\b", re.I)
+_CONFIGURATION = re.compile(r"\b(?:bundles?|package|pairing|paired|all[ -]in[ -]one|complete systems?)\b", re.I)
 
 
 def required_components(product):
@@ -46,10 +48,8 @@ def _passages(quote, text):
     """Keep the quoted clause and a nearby heading; never combine product cards."""
     needle = normalize_quote(quote)
     blocks = [value for part in re.split(r"\n\s*\n", text) if (value := normalize_quote(part))]
-    found = False
     for index, block in enumerate(blocks):
         for match in re.finditer(re.escape(needle), block, re.I):
-            found = True
             prefix = block[:match.start()]
             boundaries = list(re.finditer(r"[.!?]\s+", prefix))
             begin = boundaries[-1].end() if boundaries else 0
@@ -57,11 +57,6 @@ def _passages(quote, text):
             end = match.end() if needle.endswith((".", "!", "?")) else match.end()+tail.end() if tail else len(block)
             heading = blocks[index-1] if index and len(blocks[index-1]) <= 150 and not re.search(r"[.!?]", blocks[index-1]) else ""
             yield block[begin:end], heading
-    if not found:
-        # Quotes may cross adjacent HTML label/value blocks; the whole quote must match.
-        normalized = " ".join(blocks)
-        for match in re.finditer(re.escape(needle), normalized, re.I):
-            yield normalized[max(0, match.start()-100):match.end()+100], ""
 
 
 def _primary_tub(page, matched_urls):
@@ -92,7 +87,11 @@ def verify_product_configuration(product, evidence, pages, matched_urls):
         for page in pages:
             if entry.get("source_url") not in {page["url"], page.get("requested_url")}:
                 continue
-            for clause, heading in _passages(quote, page["text"]):
+            passages = list(_passages(quote, page["text"]))
+            if not passages and quote.casefold() in normalize_quote(page["text"]).casefold():
+                result["observations"].append({"source_url": entry["source_url"], "quote": entry["quote"],
+                                               "reason": "configuration_quote_crosses_source_blocks"})
+            for clause, heading in passages:
                 reason, basis = "components_not_affirmatively_supplied", None
                 if _NEGATIVE.search(clause):
                     reason = "components_negated_or_sold_separately"
@@ -100,6 +99,8 @@ def verify_product_configuration(product, evidence, pages, matched_urls):
                     reason = "chiller_compartment_or_accessory_only"
                 elif _UNCERTAIN.search(clause):
                     reason = "optional_compatible_or_hypothetical_chiller"
+                elif _CATALOGUE_LIST.search(heading + " " + clause) and not _CONFIGURATION.search(clause):
+                    reason = "separate_product_list_only"
                 elif _CHILLER.search(quote):
                     affirmative = bool(_INCLUSION.search(quote) or _INCLUSION.search(clause) or _INCLUSION.search(heading))
                     if _TUB.search(quote) and (affirmative or "+" in quote):
