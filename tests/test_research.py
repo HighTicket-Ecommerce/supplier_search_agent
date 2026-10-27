@@ -258,14 +258,40 @@ class ResearchTests(unittest.TestCase):
         result = web_fetcher.prompt_pages(pages, "Sauna")
         self.assertTrue(any("sales@fixture.example" in text for text in result[0]["excerpts"]))
 
-    def test_targeted_pages_include_products_and_count_failed_attempts(self):
+    def test_excerpts_follow_brief_countries_not_fixed_towns(self):
+        text = ("Menu " * 200) + "Visit our Ontario showroom this weekend." + (" Menu" * 200) + " coldture hq is in vaughan."
+        pages = [{"url":"https://coldture.com", "text": text}]
+        canada = web_fetcher.prompt_pages(pages, "Complete cold plunge systems", countries=["Canada"])
+        germany = web_fetcher.prompt_pages(pages, "Complete cold plunge systems", countries=["Germany"])
+        self.assertTrue(any("ontario showroom" in excerpt.casefold() for excerpt in canada[0]["excerpts"]))
+        self.assertFalse(any("ontario showroom" in excerpt.casefold() for excerpt in germany[0]["excerpts"][1:]))
+        self.assertTrue(any("hq is in vaughan" in excerpt.casefold() for excerpt in canada[0]["excerpts"]))
+        self.assertTrue(any("hq is in vaughan" in excerpt.casefold() for excerpt in germany[0]["excerpts"]))
+
+    def test_targeted_pages_prefer_about_then_count_failed_attempts(self):
         context = self.context(max_pages_per_supplier=3)
         first = {"url":"https://fixture.example/", "text":"[Privacy](/privacy) [Product](/products/sauna) [About](/about) [Contact](/contact)"}
         with patch.object(web_fetcher,"fetch_page",side_effect=[first,None,None]) as fetch:
             result = web_fetcher.fetch_website_pages("https://fixture.example/",context)
         self.assertEqual(fetch.call_count, 3)
-        self.assertEqual(fetch.call_args_list[1].args[0], "https://fixture.example/products/sauna")
+        self.assertEqual(fetch.call_args_list[1].args[0], "https://fixture.example/about")
         self.assertEqual(len(result), 1)
+
+    def test_valid_quotes_survive_one_invented_claim(self):
+        pages = [{"url":"https://fixture.example/about", "requested_url":"https://fixture.example",
+                  "text":"Based in Surrey, BC. We manufacture sauna heaters."}]
+        evidence = [
+            {"claim":"country","source_url":"https://fixture.example/about","quote":"Based in Surrey, BC"},
+            {"claim":"product_match","source_url":"https://fixture.example/about","quote":"An invented source quote."},
+            {"claim":"role","source_url":"https://fixture.example","quote":"We manufacture sauna heaters."},
+        ]
+        valid, ok = supplier_validator.validate_evidence(evidence, pages)
+        self.assertTrue(ok)
+        self.assertEqual([e["claim"] for e in valid], ["country","role"])
+        curly = [{"claim":"country","source_url":"https://fixture.example/about",
+                  "quote":"We\u2019re a Surrey, BC manufacturer"}]
+        pages[0]["text"] = "We're a Surrey, BC manufacturer of heaters."
+        self.assertTrue(supplier_validator.validate_evidence(curly, pages)[1])
 
     def test_limits_stop_before_paid_calls(self):
         context = self.context(max_execution_cost_usd=0.5, max_external_calls=1, max_pages=1)

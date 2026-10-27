@@ -63,18 +63,22 @@ def fetch_page(url, context, *, attempts_left=None):
     return page
 
 
+def _product_terms(product):
+    return {t.rstrip("s") for t in re.findall(r"\w+", (product or "").casefold()) if len(t) > 3}
+
+
 def _page_priority(url, product):
     path = urlsplit(url).path.casefold()
-    if re.search(r'privacy|terms|checkout|cart|login|account|shipping|refund|returns|blog|news', path):
+    if re.search(r"privacy|terms|checkout|cart|login|account|shipping|refund|returns|blog|news", path):
         return None
-    if re.search(r'product|collection|catalog|sauna|plunge|fireplace|heater', path):
-        terms = {t.rstrip('s') for t in re.findall(r'\w+', product.casefold()) if len(t) > 3}
-        return (0, -sum(t in path for t in terms))
-    if re.search(r'about|company|our-story', path):
+    terms = _product_terms(product)
+    if re.search(r"about|company|our-story|who-we-are|our-team|mission", path):
+        return (0, 0)
+    if re.search(r"contact|location|locations|headquarters|\bhq\b|faq", path):
         return (1, 0)
-    if re.search(r'contact', path):
-        return (2, 0)
-    if re.search(r'dealer|wholesale', path):
+    if re.search(r"product|collection|catalog|shop", path) or any(term in path for term in terms):
+        return (2, -sum(term in path for term in terms))
+    if re.search(r"dealer|wholesale", path):
         return (3, 0)
     return None
 
@@ -113,19 +117,33 @@ def fetch_website_pages(base_url, context):
     return pages
 
 
-def prompt_pages(pages, product):
+COUNTRY_LOCATION_CUES = {
+    "United States": ["United States", "USA", "California", "Oregon", "Washington", "Tennessee",
+                      "Texas", "New York", "Colorado", "Arizona", "Florida"],
+    "Canada": ["Canada", "Ontario", "British Columbia", "Quebec", "Alberta", "Nova Scotia"],
+    "United Kingdom": ["United Kingdom", "England", "Scotland", "Wales", "Britain"],
+    "Germany": ["Germany", "Deutschland"],
+    "Australia": ["Australia"],
+}
+
+
+def prompt_pages(pages, product, *, countries=None):
     # Scan complete captured pages before choosing excerpts; long navigation cannot hide contacts.
-    terms = [re.escape(t) for t in re.findall(r'\w+', product) if len(t) > 3]
-    patterns = [r'[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}', r'headquarters|based in|Canada|Ontario|United States|Surrey',
-                r'manufactur\w*|own brand|engineer\w*'] + terms
+    terms = [re.escape(t) for t in _product_terms(product)]
+    location = [r"headquarters", r"\bhq\b", r"based (?:just )?(?:outside|in|near)",
+                r"head office", r"office address", r"located in", r"our office"]
+    for country in countries or []:
+        location.extend(re.escape(cue) for cue in COUNTRY_LOCATION_CUES.get(country, [country]))
+    patterns = [r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "|".join(location),
+                r"manufactur\w*|own brand|engineer\w*"] + terms
     result = []
     for page in pages:
-        text = page['text']
+        text = page["text"]
         excerpts = [text[:1000]]
         for pattern in patterns:
-            for match in list(re.finditer(pattern, text, re.I))[:2]:
-                excerpt = text[max(0, match.start()-80):match.end()+220]
+            for match in list(re.finditer(pattern, text, re.I))[:3]:
+                excerpt = text[max(0, match.start() - 80):match.end() + 220]
                 if excerpt not in excerpts:
                     excerpts.append(excerpt)
-        result.append({"url": page['url'], "excerpts": excerpts[:12]})
+        result.append({"url": page["url"], "excerpts": excerpts[:12]})
     return result
