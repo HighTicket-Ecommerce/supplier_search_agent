@@ -8,7 +8,7 @@ import re
 from backend.location_evidence import normalize_quote
 
 
-_CUES = re.compile(r"\b(?:manufactur\w*|produc\w*|build\w*|built|handbuilt|craft\w*|design\w*|engineer\w*|"
+_CUES = re.compile(r"\b(?:manufactur\w*|produc(?:e|es|ed|tion|ing)|build\w*|built|handbuilt|craft\w*|design\w*|engineer\w*|"
                    r"brands?|own\w*|creates?|make|distribut\w*|wholesal\w*|retail\w*|resell\w*|suppl\w*|"
                    r"marketplace|publish\w*|reviews?|blog|media)\b", re.I)
 _GOODS = re.compile(r"\b(?:products?|goods|equipment|systems?|heaters?|saunas?|tubs?|plunges?|chillers?|"
@@ -37,8 +37,9 @@ def _subjects(company):
     return r"(?:\bwe\b|" + named + r")", named
 
 
-def _action(text, actor, verb):
-    return bool(re.search(actor + r"\s+(?:(?:also|proudly|personally|directly|locally)\s+){0,3}(?:" + verb + r")\b", text, re.I))
+def _action(text, actor, verb, *, physical_object=False):
+    matches = re.finditer(actor + r"\s+(?:(?:also|proudly|personally|directly|locally)\s+){0,3}(?:" + verb + r")\b", text, re.I)
+    return any(not physical_object or _GOODS.search(text[match.end():]) for match in matches)
 
 
 def _self_role(text, actor, role):
@@ -69,7 +70,7 @@ def _supported_roles(quote, clause, heading, company):
     roles = set()
     goods = bool(_GOODS.search(clause))
     production = r"(?:designs?\s+(?:and|&)\s+)?(?:manufactur(?:e|es)|produc(?:e|es)|builds?|handbuilds?)"
-    maker = _action(clause, actor, production) and goods and not _NON_GOODS_OBJECT.search(clause)
+    maker = _action(clause, actor, production, physical_object=True) and not _NON_GOODS_OBJECT.search(clause)
     own_facility = bool(re.search(r"\b(?:manufactured|produced|built)\b.{0,25}\bin our\b.{0,35}\b(?:facility|factory|workshop)\b", clause, re.I)) and goods
     # An explicit self-description may sit immediately below the company's heading.
     maker_label = (_self_role(clause, actor, "manufacturer") or
@@ -85,7 +86,7 @@ def _supported_roles(quote, clause, heading, company):
     explicit_brand = (_self_role(clause, actor, "brand(?: owner)?") or
                       bool(_OUR_BRAND.search(clause)) or
                       _action(clause, actor, r"owns?\s+(?:the\s+)?[^.!?;]{0,50}\bbrand"))
-    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?") or
+    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?", physical_object=True) or
                    re.search(r"\bevery product we (?:make|create)\b", clause, re.I)) and goods and
                   not _CONTRACT.search(clause) and not _NON_GOODS_OBJECT.search(clause))
     own_line = maker and bool(re.search(r"\bour (?:own )?(?:products?|line|brand)\b", clause, re.I))
@@ -136,3 +137,48 @@ def verify_supplier_role(role, company, evidence, pages):
     if result["supporting_evidence"]:
         result["status"] = "supported"
     return result
+
+
+def recover_role_evidence(role, company, pages):
+    """Recover at most two literal role quotes from already captured pages.
+
+    Only the exact proposed role is eligible; no model calls or reclassification.
+    Candidate scanning is capped and every recovered quote is revalidated by the
+    same source-local role guard before it can affect qualification.
+    """
+    actor, named = _subjects(company)
+    recovered = []
+    for page in pages:
+        scanned = 0
+        page_recovered = False
+        blocks = [value for part in re.split(r"\n\s*\n", page["text"]) if (value := normalize_quote(part))]
+        for index, block in enumerate(blocks):
+            heading = blocks[index-1] if index and len(blocks[index-1]) < 150 else ""
+            for clause in re.split(r"(?<=[.!?;])\s+", block):
+                if not _CUES.search(clause) or not (re.search(actor, clause, re.I) or
+                    re.search(named, heading, re.I) or re.search(r"\bour\b", clause, re.I)):
+                    continue
+                words = clause.split()
+                candidates = [" ".join(words[start:start+12]) for start in range(min(96-scanned, max(1, len(words)-11)))]
+                candidates = [q for q in candidates if _CUES.search(q)]
+                candidates.sort(key=lambda q: (role not in _supported_roles(q, q, "", company)[0],
+                                               not bool(re.match(actor + r"|our\b|every\b", q, re.I))))
+                for quote in candidates:
+                    scanned += 1
+                    roles, _ = _supported_roles(quote, clause, heading, company)
+                    if role in roles:
+                        entry = {"claim": "role", "source_url": page["url"], "quote": quote,
+                                 "evidence_origin": "captured_source_role_repair"}
+                        if verify_supplier_role(role, company, [entry], [page])["status"] == "supported":
+                            recovered.append(entry)
+                            page_recovered = True
+                            break
+                    if scanned >= 96:
+                        break
+                if page_recovered or scanned >= 96:
+                    break
+            if page_recovered or scanned >= 96:
+                break
+        if len(recovered) >= 2:
+            break
+    return recovered

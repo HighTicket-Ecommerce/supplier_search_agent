@@ -178,14 +178,30 @@ class SupplierRoleTests(unittest.TestCase):
         row = self.check_supplier(["We publish sauna product reviews"], role="Media / Blog", is_product_company=False)
         self.assertEqual((row["status"], row["reason"]), ("excluded", "not_product_company"))
 
-    def test_role_support_cannot_cross_source_blocks_or_borrow_an_unquoted_claim(self):
+    def test_role_support_cannot_cross_source_blocks_and_source_repair_is_audited(self):
         row = self.check_supplier(["Contact our team"], body="Contact our team.\n\nWe manufacture sauna heaters.")
-        self.assert_role_review(row)
+        self.assertEqual(row["status"], "qualified")
+        self.assertTrue(row["role_verification"]["source_repair_used"])
+        self.assertEqual(row["role_verification"]["model_evidence_status"], "not_established")
+        self.assertTrue(any(e.get("evidence_origin") == "captured_source_role_repair" for e in row["evidence"]))
         row = self.check_supplier(["We manufacture sauna heaters"], body="We manufacture\n\nsauna heaters")
         self.assert_role_review(row)
         row = self.check_supplier(["We distribute third-party heaters"], role="Distributor",
                                  body="We distribute third-party heaters.\n\nWholesale to dealers")
         self.assert_role_review(row, "Distributor")
+
+    def test_source_repair_needs_the_exact_role_and_preserves_attribution_checks(self):
+        for body in ["Contact us.\n\nExample designs sauna heaters.",
+                     "Testimonials\n\nWe manufacture sauna heaters.",
+                     "Our suppliers manufacture sauna heaters.", "We don't manufacture sauna heaters."]:
+            with self.subTest(body=body):
+                self.assert_role_review(self.check_supplier(["Contact us"], body=body))
+        row = self.check_supplier(["Example - Official Store"], role="Brand owner",
+                                 body="Example - Official Store\n\nExample crafts the best sauna heaters in Canada.")
+        self.assertEqual(row["status"], "qualified")
+        self.assertTrue(row["role_verification"]["source_repair_used"])
+        self.assertTrue(all(len(e["quote"].split()) <= 12 for e in row["evidence"]))
+        self.assertTrue(any(e["quote"].startswith("Example crafts") for e in row["evidence"] if e["claim"] == "role"))
 
     def test_support_retains_verified_source_and_drops_irrelevant_role_quotes(self):
         quote = "We manufacture sauna heaters"
