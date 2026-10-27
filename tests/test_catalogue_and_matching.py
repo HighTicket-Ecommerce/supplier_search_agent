@@ -82,6 +82,18 @@ class CatalogueAndMatchingTests(unittest.TestCase):
         brands = self.index.match("Fire Magic", "")
         self.assertEqual(len(brands["matches"]), 1)
         self.assertNotEqual(brands["matches"][0]["supplier_name"], "Real Fyre")
+        same_host = self.index.match("Homecraft Inc.", "https://homecraftsaunas.com")
+        self.assertEqual(same_host["status"], "existing_domain_match")
+        self.assertEqual(same_host["name_relation"], "legal_suffix")
+        related = self.index.match("Homecraft", "https://shop.homecraftsaunas.com")
+        self.assertEqual(related["status"], "related_domain_needs_verification")
+        self.assertEqual(related["basis"], "related_registrable_domain")
+        other_site = self.index.match("Fire Magic", "https://unrelated.example")
+        self.assertEqual(other_site["status"], "name_match_different_website")
+        redirected = self.index.match("Homecraft", "https://old.example",
+                                      alternate_urls=("https://www.homecraftsaunas.com/about",))
+        self.assertEqual(redirected["status"], "existing_domain_match")
+        self.assertEqual(redirected["matched_url"], "https://www.homecraftsaunas.com/about")
 
     def test_conflicting_names_on_one_host_are_ambiguous(self):
         reference = master_index.import_reference("Supplier,Website\nOne,https://example.com\nTwo,https://www.example.com/about\n")
@@ -101,6 +113,24 @@ class CatalogueAndMatchingTests(unittest.TestCase):
         self.assertEqual(job["operations"], [])
         self.assertEqual(job["accepted_count"], 0)
         supplier.assert_not_called(); search.assert_not_called(); sheet.assert_not_called()
+
+    def test_discovery_skips_known_and_blocked_hosts_but_checks_seeds(self):
+        context = self.context(use_apify=True, candidate_urls=["https://homecraftsaunas.com"],
+                               master_reference_id=self.reference["id"], max_candidate_domains=5)
+        discovered = [{"url": "https://canadianspacompany.ca", "discovery_source": "serp"},
+                      {"url": "https://www.amazon.com/plunge", "discovery_source": "serp", "skip_reason": "blocked_domain"},
+                      {"url": "https://new-plunge.example", "discovery_source": "serp"}]
+        with patch.object(research_runner, "run_serp_discovery", return_value=discovered), \
+             patch.object(research_runner, "process_supplier",
+                          return_value={"status": "review", "supplier_name": "Homecraft",
+                                        "url": "https://homecraftsaunas.com"}) as supplier:
+            research_runner.run_research_job("test", context.request)
+        job = job_store.get_job("test")
+        self.assertEqual(supplier.call_count, 2)
+        self.assertEqual([c.args[1] for c in supplier.call_args_list],
+                         ["https://homecraftsaunas.com", "https://new-plunge.example"])
+        self.assertEqual({row["reason"] for row in job["skipped"]}, {"already_in_master", "blocked_domain"})
+        self.assertTrue(all(row["reason"] for row in job["skipped"]))
 
     def test_missing_reference_and_invalid_mode_inputs_fail_before_work(self):
         for payload in [{"research_mode":"list_compare"}, {"research_mode":"distributor_brands"},

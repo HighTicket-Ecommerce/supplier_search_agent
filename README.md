@@ -32,7 +32,9 @@ Qualified means the supplied evidence passed the research checks. It does not es
 
 In **Master supplier list**, import a UTF-8 CSV or load a previously imported reference, then select it under **Compare against**. Importing stores an immutable, minimal local reference in ignored `var/references/`; it never edits the source CSV. Name, website, product types, country and source row are retained. Private contact columns are not copied. Override the directory with `SUPPLIER_REFERENCE_DIR`.
 
-The matcher distinguishes exact website-host matches, website matches with conflicting names, exact normalized names needing verification, ambiguity and unmatched records. It removes leading `www.` and normalizes spacing/punctuation in names; it does not merge company suffixes, similar names, alternate domains or parent/brand relationships. A content hash plus source row identifies a reference record, not a permanent business identity. Unmatched does **not** mean confirmed new. Master country data never substitutes for current headquarters evidence.
+The matcher compares the submitted website and the final redirected website. Exact host matches stay `existing_domain_match`. A legal-suffix difference on that same host (for example "Homecraft" and "Homecraft Inc.") is still an existing match and records `name_relation`. A different host under the same registrable domain is `related_domain_needs_verification`. The same normalized name on a different website is `name_match_different_website`; a name-only match with no conflicting website stays `name_match_needs_verification`. Similar names, parent/brand relationships and private-platform hosts such as `myshopify.com` are never merged. A content hash plus source row identifies a reference record, not a permanent business identity. Unmatched does **not** mean confirmed new. Master country data never substitutes for current headquarters evidence.
+
+Discovered sites whose exact website host is already in the selected master list are skipped before any paid check and listed under **Skipped sites**. Websites you supply are always checked. Retailer and marketplace hosts are matched on whole domain labels, so names such as Fellowes are not dropped because they contain "lowes".
 
 Choose **Compare supplier lists** for a deterministic comparison of up to 2,000 supplied rows, using a CSV or one name per line. It uses no actor/model calls and produces observations rather than qualified suppliers. CSV headers may be `Supplier`, `supplier_name`, `SUPPLIERS`, `name` or `brand`, plus optional `Website`/`url`. Master imports allow up to 50,000 rows and 15 MB.
 
@@ -69,13 +71,13 @@ Every endpoint except `/health` requires the `X-API-Key` header. The key is chec
 - `GET /health`: credential-presence flags, never credential values.
 - `POST /research/start`: validated request; returns a queued job ID.
 - `GET /research/status/{job_id}`: progress, counts and limits.
-- `GET /research/result/{job_id}`: saved qualified/review/excluded results, sources and run operations.
+- `GET /research/result/{job_id}`: saved qualified/review/excluded results, skipped sites, sources and run operations.
 - `POST /research/stop/{job_id}`: request stop, including queued jobs.
 - `POST /research/export/{job_id}` with `selected_urls`: explicitly export selected qualified rows from a non-preview job after it stops.
 - `POST /references/master` with `filename` and `csv_content`: import a minimal master reference; returns its content ID and row count.
 - `GET /references/master`: list saved references without supplier/contact contents.
 
-New request options include `research_mode` (`supplier_search`, `distributor_brands`, `list_compare`), `master_reference_id`, `comparison_rows`, `directory_urls`, `verify_directory_brands`, `max_directory_entries`, `use_shopify_catalogue`, `shopify_catalogue_urls`, `max_catalogue_products` and `allow_browser_fallback`. Result payloads include `master_match` per candidate/observation, `directory_coverage`, saved `catalogues` and warnings. Comparison rows are objects with `supplier_name` and optional `url`. Distributor mode requires directory URLs; comparison mode requires an imported master and comparison rows. Extraction and list comparison do not run generic supplier discovery.
+New request options include `research_mode` (`supplier_search`, `distributor_brands`, `list_compare`), `master_reference_id`, `comparison_rows`, `directory_urls`, `verify_directory_brands`, `max_directory_entries`, `use_shopify_catalogue`, `shopify_catalogue_urls`, `max_catalogue_products` and `allow_browser_fallback`. Result payloads include `master_match` per candidate/observation, `skipped` sites, `directory_coverage`, saved `catalogues` and warnings. Comparison rows are objects with `supplier_name` and optional `url`. Distributor mode requires directory URLs; comparison mode requires an imported master and comparison rows. Extraction and list comparison do not run generic supplier discovery.
 
 Example seed-only preview:
 

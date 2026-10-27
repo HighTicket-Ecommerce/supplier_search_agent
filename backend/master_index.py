@@ -10,12 +10,24 @@ import tempfile
 import time
 import unicodedata
 
-from backend.utils import domain_from_url
+from backend.utils import domain_from_url, registrable_domain
+
+LEGAL_SUFFIXES = {
+    "incorporated", "corporation", "company", "limited", "gmbh", "llc", "ltd",
+    "inc", "corp", "plc", "llp", "lp", "sas", "pty", "co", "sa", "bv", "nv", "ag",
+}
 
 
 def name_key(value):
     value = unicodedata.normalize("NFKD", value).casefold()
     return "".join(c for c in value if c.isalnum())
+
+
+def core_name_key(value):
+    tokens = re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", value).casefold())
+    while tokens and tokens[-1] in LEGAL_SUFFIXES:
+        tokens.pop()
+    return "".join(tokens)
 
 
 def reference_directory():
@@ -94,30 +106,64 @@ def list_references():
 class MasterIndex:
     def __init__(self, reference):
         self.reference = reference
-        self.by_domain, self.by_name = {}, {}
+        self.by_domain, self.by_name, self.by_registrable = {}, {}, {}
         for row in reference["records"]:
             if row["domain"]:
                 self.by_domain.setdefault(row["domain"], []).append(row)
+                parent = registrable_domain(row["domain"])
+                if parent:
+                    self.by_registrable.setdefault(parent, []).append(row)
             if name_key(row["supplier_name"]):
                 self.by_name.setdefault(name_key(row["supplier_name"]), []).append(row)
 
-    def match(self, name="", url=""):
-        domain = domain_from_url(url)
-        rows = self.by_domain.get(domain, [])
-        if rows:
-            status = "existing_domain_match" if len({name_key(r["supplier_name"]) for r in rows}) == 1 else "ambiguous"
-            if status == "existing_domain_match" and name_key(name) and name_key(name) not in {name_key(r["supplier_name"]) for r in rows}:
-                status = "domain_match_name_conflict"
-            basis = "exact_website_host"
-        else:
-            rows = self.by_name.get(name_key(name), [])
-            status = ("name_match_needs_verification" if len({r["domain"] for r in rows}) == 1
-                      and any(r["domain"] for r in rows) else "ambiguous") if rows else "unmatched"
-            basis = "exact_normalized_name" if rows else "no_exact_match"
-        return {"status": status, "basis": basis, "master_reference_id": self.reference["id"],
+    def has_exact_host(self, host):
+        return bool(host and host in self.by_domain)
+
+    def _payload(self, status, basis, rows, *, name_relation="", matched_url=""):
+        return {"status": status, "basis": basis, "name_relation": name_relation, "matched_url": matched_url,
+                "master_reference_id": self.reference["id"],
                 "company_identity_verified": False, "confirmed_new_supplier": False,
                 "matches": [{"supplier_name": r["supplier_name"], "url": r["url"], "country": r["country"],
                              "source_row": r["source_row"], "master_reference_id": self.reference["id"]} for r in rows]}
+
+    def _hosts(self, url, alternate_urls):
+        hosts = []
+        for candidate in (url, *alternate_urls):
+            host = domain_from_url(candidate)
+            if host and host not in {h[0] for h in hosts}:
+                hosts.append((host, candidate))
+        return hosts
+
+    def match(self, name="", url="", *, alternate_urls=()):
+        hosts = self._hosts(url, alternate_urls)
+        for host, matched_url in hosts:
+            rows = self.by_domain.get(host, [])
+            if not rows:
+                continue
+            names = {name_key(r["supplier_name"]) for r in rows}
+            if len(names) != 1:
+                return self._payload("ambiguous", "exact_website_host", rows, matched_url=matched_url)
+            relation = "exact" if not name_key(name) or name_key(name) in names else (
+                "legal_suffix" if core_name_key(name) and core_name_key(name) == core_name_key(rows[0]["supplier_name"])
+                else "different")
+            status = "existing_domain_match" if relation != "different" else "domain_match_name_conflict"
+            return self._payload(status, "exact_website_host", rows, name_relation=relation, matched_url=matched_url)
+        for host, matched_url in hosts:
+            parent = registrable_domain(host)
+            related = [r for r in self.by_registrable.get(parent, []) if r["domain"] != host]
+            if related:
+                return self._payload("related_domain_needs_verification", "related_registrable_domain", related,
+                                     matched_url=matched_url)
+        rows = self.by_name.get(name_key(name), [])
+        if not rows:
+            return self._payload("unmatched", "no_exact_match", [])
+        domains = {r["domain"] for r in rows}
+        if len(domains) != 1 or not any(domains):
+            return self._payload("ambiguous", "exact_normalized_name", rows)
+        if hosts and hosts[0][0] != next(iter(domains)):
+            return self._payload("name_match_different_website", "exact_normalized_name", rows,
+                                 matched_url=hosts[0][1])
+        return self._payload("name_match_needs_verification", "exact_normalized_name", rows)
 
 
 def match_without_reference():

@@ -85,12 +85,13 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 
 ## Step 4 — master-list comparison and discovery filter (branch `fix/master-matching`)
 
-- [ ] Match blocked domains on whole domain labels, so `fellowes.com` and `championtarget.com` are no longer filtered as Lowe's and Target.
-- [ ] Record every skipped candidate with its reason (blocked domain, already in the master list) instead of dropping it silently.
-- [ ] Skip discovered candidates whose website host is already in the master list; still check supplied websites.
-- [ ] Compare both the submitted and the final (redirected) website with the master list.
-- [ ] Add `related_domain_needs_verification` (same registrable domain, different host) and `name_match_different_website` (same name, different website).
-- [ ] Treat legal-suffix differences on the same website (for example "Canadian Spa Co" and "Canadian Spa Company") as the same company and record the name relation.
+- [x] Match blocked domains on whole domain labels, so `fellowes.com` and `championtarget.com` are no longer filtered as Lowe's and Target.
+- [x] Record every skipped candidate with its reason (blocked domain, already in the master list) instead of dropping it silently.
+- [x] Skip discovered candidates whose website host is already in the master list; still check supplied websites.
+- [x] Compare both the submitted and the final (redirected) website with the master list.
+- [x] Add `related_domain_needs_verification` (same registrable domain, different host) and `name_match_different_website` (same name, different website).
+- [x] Treat legal-suffix differences on the same website (for example "Homecraft Inc.") as the same company and record the name relation.
+- [ ] Push and open the pull request when allowed; merge after your approval.
 
 **Done when:** the existing matching trap tests still pass, the 2,000-row profile shows the subdomain and legal-suffix cases under the right statuses, and no candidate disappears without a recorded reason.
 
@@ -187,5 +188,6 @@ These are initial acceptance targets, not measured results or statistical guaran
 | 2026-10-26 | Plan reorganized; baseline committed locally on `feat/supplier-research-controls` | 48 tests passed; branch renamed from `codex/`; pull request pending because PRs are on hold |
 | 2026-10-26 | Step 2 on local branch `fix/api-and-export-safety` (based on the baseline commit `f1e5b38`) | 52 tests passed (4 new: API key before body parsing, 503 without a configured key, formula-safe CSV, UI password and rejected-key message). Railway variables still to set |
 | 2026-10-27 | Step 3 on local branch `fix/dependency-security` | 53 tests passed on upgraded packages; OpenAI schemas unchanged; `pip-audit` clean. CI workflow added (read-only, hash-pinned actions). Unused Apify SDK, tenacity, BeautifulSoup and three unused files removed |
+| 2026-10-27 | Step 4 on local branch `fix/master-matching` | 56 tests passed. 2,000-row profile: shop-host + " Inc." → 2,000 `related_domain_needs_verification`; same host + " Inc." → 1,996 existing (was 1,997 name conflicts); same name on another site → 1,998 `name_match_different_website`. `fellowes.com` and `championtarget.com` no longer blocked. Four remaining blocked master hosts are actual retailers |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.

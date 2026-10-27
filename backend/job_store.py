@@ -24,7 +24,7 @@ def init_job(job_id, request=None):
     job = {"status": "queued", "accepted": [], "review": [], "rejected": [], "total": 0,
            "processed": 0, "error": None, "request": request or {}, "limits": {},
            "operations": [], "exports": {}, "observations": [], "directory_coverage": [],
-           "catalogues": {}, "warnings": [], "master_reference": None, "created_at": time.time()}
+           "catalogues": {}, "warnings": [], "skipped": [], "master_reference": None, "created_at": time.time()}
     with _connect() as db:
         db.execute("INSERT INTO jobs VALUES (?, ?, ?)", (job_id, json.dumps(job), time.time()))
 

@@ -88,7 +88,8 @@ def research_status(job_id: str):
     return {"status": job["status"], "processed": job["processed"], "total": total,
             "progress_pct": round(job["processed"] / total * 100, 1) if total else 0,
             "accepted_count": len(job["accepted"]), "review_count": len(job["review"]),
-            "rejected_count": len(job["rejected"]), "observation_count": len(job.get("observations", [])), "target_suppliers": job.get("target_suppliers", 0),
+            "rejected_count": len(job["rejected"]), "skipped_count": len(job.get("skipped", [])),
+            "observation_count": len(job.get("observations", [])), "target_suppliers": job.get("target_suppliers", 0),
             "error": job.get("error"), "limit_reason": job.get("limit_reason"), "limits": job["limits"]}
 
 
@@ -114,7 +115,8 @@ def research_result(job_id: str):
             "limits": job["limits"], "operations": job["operations"], "exports": job["exports"], "error": job.get("error"),
             "limit_reason": job.get("limit_reason"), "research_mode": job["request"].get("research_mode", "supplier_search"),
             "observations": job.get("observations", []), "directory_coverage": job.get("directory_coverage", []),
-            "warnings": job.get("warnings", []), "master_reference": job.get("master_reference"), "catalogues": job.get("catalogues", {})}
+            "warnings": job.get("warnings", []), "skipped": job.get("skipped", []),
+            "master_reference": job.get("master_reference"), "catalogues": job.get("catalogues", {})}
 
 
 class ReferenceRequest(BaseModel):
