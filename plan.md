@@ -1,10 +1,10 @@
 # Supplier research agent — step-by-step plan
 
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 **Goal:** find more relevant suppliers, verify the requested products and company identities, and produce useful evidence with predictable research costs.
 
-**Current phase:** securing and preserving the baseline before the benchmark. The offline suite passes (48 tests). Pull requests are on hold, so each change is prepared and tested on its own local branch. The next research task is the 20–30-site cold-plunge benchmark (Step 5). Broader research accuracy is still unmeasured.
+**Current phase:** evidence-collection/HQ fixes are locally validated on `fix/evidence-collection-and-hq`; all 80 offline tests pass. Coldture and Sun Home qualified in targeted live checks; BlueCube's saved address evidence passed an offline replay; Plunge stayed in review. [Detailed results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). Pull requests/deployment remain on hold. Next: the remaining development cases, then discovery/catalogue evaluation and fresh independent final cases.
 
 ## Already completed
 
@@ -103,7 +103,7 @@ First category: **complete cold-plunge systems, with supplier headquarters in th
 - [x] Select 24 sites covering genuine suppliers, chillers-and-complete-systems, unrelated businesses, overseas headquarters and blocked hosts.
 - [x] Keep Homecraft and Coldture as regression anchors, separate from new evaluation sites.
 - [x] Before reading agent decisions, manually label each site's product fit, company role, headquarters evidence and expected master-list relationship. Official URLs, quotes and the 2026-10-27 review date are in the labels file. Missing evidence stays unknown.
-- [x] Split new sites into a 14-site development group and an 8-site untouched final-check group. Labels and brief were frozen before any agent run.
+- [x] Split new sites into a 14-site development group and an 8-site final-check group. Labels and brief were frozen before any agent run. The first baseline included the final-check cases; later fixes have used development/anchor cases only. A fresh independent final set is still needed.
 - [x] Save the versioned benchmark under `docs/benchmarks/cold-plunge-2026-10-27/`. No private contacts were copied.
 
 **Done when:** each case has an evidence-backed expected outcome, or an explicit unknown/review label. A master CSV country field alone is insufficient headquarters evidence.
@@ -134,7 +134,7 @@ First category: **complete cold-plunge systems, with supplier headquarters in th
 ## Step 8 — score the results
 
 - [ ] Report qualified precision: manually confirmed eligible suppliers / all automatically qualified suppliers.
-- [ ] Report known-positive coverage: automatically qualified known-positive sites / all labelled eligible sites actually evaluated. Also report how much of the planned cohort was evaluated.
+- [ ] Report qualification coverage against cases labelled `expected_status=qualified`. Separately report relevant product suppliers whose headquarters/role remain unknown and correctly need review. Show how much of each cohort was evaluated.
 - [ ] Count eligible suppliers left in review, incorrect exclusions, extraction failures, duplicate qualified companies and uncertain master matches.
 - [ ] Compare each candidate's master-list status with its label: wrong merges, labelled master suppliers reported as new, and candidates skipped or blocked by mistake.
 - [ ] Check product/variant relevance, literal source quotes, explicit currencies and price-sample coverage.
@@ -146,7 +146,7 @@ Initial quality targets to assess on the labelled cohort:
 | Check | Target |
 | --- | --- |
 | Qualified precision | At least 90%; always show the underlying counts |
-| Coverage of labelled eligible sites | At least 80%; report missing/limited cases separately |
+| Coverage of cases labelled expected-qualified | At least 80%; report missing/limited cases separately |
 | Accepted suppliers supported only by accessory/service evidence | Zero |
 | Duplicate qualified companies | Zero unresolved duplicates |
 | Accepted evidence and price observations | Verified quotes, source URLs, explicit currency and honest coverage labels |
@@ -155,16 +155,22 @@ Initial quality targets to assess on the labelled cohort:
 
 These are initial acceptance targets, not measured results or statistical guarantees. A small, deliberately mixed benchmark does not establish production-wide accuracy.
 
+Scoring correction (2026-10-27): the previous development+anchor denominator of 11 commercially relevant sites includes five labelled `expected_status=review` with unknown headquarters. Six cases are labelled expected-qualified. Keep the historical 1/11 result, but do not treat those five correct review outcomes as failed automatic qualifications. Recheck any label that infers a complete bundle merely from separate tubs/chillers or headquarters from manufacturing history.
+
 **Done when:** a results report explains both successful cases and failures, with an evidence-backed shortlist and observed costs.
 
 ## Step 9 — fix the largest observed problems
 
-- [ ] Rank failures by their effect on supplier quality and research effort.
-- [ ] Improve headquarters/source-page retrieval if legitimate suppliers repeatedly lack usable evidence. Page selection and headquarters excerpts in `backend/web_fetcher.py` currently rely on fixed words (`sauna`, `plunge`, `fireplace`, `heater`, `Surrey`); make them follow the brief before adding categories.
+- [x] Rank failures: missing source links, inadequate product/HQ excerpts, and permissive headquarters validation are the first priorities.
+- [x] Capture navigation/footer HTML anchors separately, follow observed company/product links within existing limits, and preserve contiguous heading/value and product-configuration windows.
+- [x] Require affirmative company-location/office context. Reject shipping, warehouse, showroom, customer, origin/founding and negated location statements; retain diagnostics for failed quotes.
+- [x] Complete targeted development previews and record both improvements and review cases, including BlueCube's source-checked address-quote replay. [Results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). Qualification requirements remain in force.
+- [ ] Rerun the remaining development cases (including Redwood, Penguin and LeisureCraft) before claiming full benchmark coverage.
 - [ ] Add evidence-backed aliases and parent/brand relationships where identity mismatches recur; retain separate identities unless a relationship is verified.
 - [ ] Improve catalogue coverage or add platform/directory adapters where current extraction misses relevant products or brands.
 - [ ] Add regression cases for each concrete failure and rerun affected checks.
 - [ ] Measure changes on development cases, then run the untouched final-check group. Once a final-check case is used to tune a fix, treat it as development data for subsequent evaluations.
+- [ ] Prepare fresh independent final-check cases before a release claim; the original final-check group was already included in the first baseline.
 
 **Done when:** the targeted failures improve without introducing new incorrect qualifications, duplicate identities or unsupported price claims.
 
@@ -192,5 +198,6 @@ These are initial acceptance targets, not measured results or statistical guaran
 | 2026-10-27 | Cold-plunge benchmark labelled and run | [Results](docs/benchmarks/cold-plunge-2026-10-27/results.md). 24 sites, seed-only, preview-only. Precision 1/1; coverage 1/14 eligible. Did not pass. No PRs. No Sheets writes |
 | 2026-10-27 | HQ pages and per-claim quotes on `fix/hq-pages-and-quotes` | About/contact/FAQ ranked above product paths. HQ excerpts follow the brief countries. One bad quote no longer voids the rest. Origin “born in / made in” quotes are not HQ. 58 tests passed |
 | 2026-10-27 | Development rerun after HQ/quote fixes | [Results](docs/benchmarks/cold-plunge-2026-10-27/results.md). Precision 1/1; coverage 1/11 eligible development+anchor sites. Coldture HQ now verified; Plunge no longer false-qualifies. Final-check not rerun. No PRs |
+| 2026-10-27 | Evidence collection and contextual HQ validation on `fix/evidence-collection-and-hq` | [Targeted results](docs/benchmarks/cold-plunge-2026-10-27/evidence-collection-results.md). 80 tests pass. Coldture/Sun Home qualified live; BlueCube qualified in saved-evidence replay after safe address shortening; Plunge stayed in review. All debugging/preview execution approximately $0.234. No final-check runs, PRs or Sheets writes |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.
