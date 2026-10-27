@@ -51,7 +51,7 @@ def main():
         target_suppliers=len(args.cases), max_candidate_domains=len(args.cases),
         max_pages=args.pages_per_site*len(args.cases), max_pages_per_supplier=args.pages_per_site,
         max_runtime_seconds=600, max_external_calls=20, max_execution_cost_usd=args.budget)
-    sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/supplier_validator.py",
+    sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/product_evidence.py", "backend/supplier_validator.py",
                "backend/models.py", "backend/model_client.py", "backend/research_runner.py", "backend/actor_client.py"]
     manifest = {"started_at": time.time(), "case_ids": args.cases, "settings": request.model_dump(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
