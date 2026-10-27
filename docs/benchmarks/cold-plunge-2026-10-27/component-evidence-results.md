@@ -1,5 +1,7 @@
 # Complete-system component evidence — 2026-10-27
 
+Follow-up: [exact supplier-role validation](role-evidence-results.md) adds role-specific proof and bounded source-quote recovery. It also records remaining office/HQ-basis inconsistency. The historical component results below remain unchanged.
+
 **LeisureCraft now stays in review because a chiller compartment or optional chiller does not establish a supplied tub-and-chiller system.** Penguin, Sun Home and Coldture retain supported complete-system evidence and qualify in the targeted previews. This fixes the product-evidence gap identified in the [HQ/context check](headquarters-context-results.md).
 
 Final application commit: `3b5952c78f1cb96d493feead69cced6390e5a8f5`, branch `fix/complete-system-components`, based on `44c36bc`. The two paid previews ran on `7ff1170b695a5fcf2e71e2bacca0a2d79e62cc25`. A subsequent paragraph-boundary/catalogue-list refinement was tested offline, including replay of all four new live responses; there was no additional provider run after that refinement. These are targeted development checks, not a new full-cohort benchmark pass.
