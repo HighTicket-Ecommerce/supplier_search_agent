@@ -278,6 +278,7 @@ class EvidenceCollectionTests(unittest.TestCase):
             ("coldture hq is in vaughan, ontario", "coldture hq is in vaughan, ontario", "headquarters"),
             ("10315 Cogdill Rd Knoxville, TN 37932", "Office Address\n\nKnoxville Office\n\n10315 Cogdill Rd\n\nKnoxville, TN 37932", "office"),
             ("Office Address 20730 72nd Ave S, Kent, WA 98032", "Office Address\n\n20730 72nd Ave S, Kent, WA 98032", "office"),
+            ("Melancthon, ON Canada, L9V 2K3", "Head Office & Manufacturing\nLeisurecraft\n\n318448 8th Line NE\nMelancthon, ON\nCanada, L9V 2K3", "headquarters"),
             ("Based in Surrey, BC", "Based in Surrey, BC, we ship worldwide.", "company_base"),
         ]
         for quote, text, kind in cases:
