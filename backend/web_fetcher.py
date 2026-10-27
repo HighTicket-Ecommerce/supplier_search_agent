@@ -92,8 +92,9 @@ def fetch_website_pages(base_url, context):
     pages = [first]
     domain = domain_from_url(first["url"])
     discovered = {}
-    for match in re.finditer(r'\]\(([^)\s]+)(?:\s+[^)]*)?\)', first["text"]):
-        url = urldefrag(urljoin(first["url"], match.group(1)))[0]
+    for raw in re.findall(r'\]\(([^)\s]+)(?:\s+[^)]*)?\)|href=["\']([^"\']+)["\']', first["text"], re.I):
+        target = next((part for part in raw if part), "")
+        url = urldefrag(urljoin(first["url"], target))[0]
         if domain_from_url(url) != domain or url.rstrip('/') == first['url'].rstrip('/'):
             continue
         rank = _page_priority(url, context.request.product)

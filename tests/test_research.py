@@ -281,6 +281,11 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(fetch.call_count, 3)
         self.assertEqual(fetch.call_args_list[1].args[0], "https://fixture.example/about")
         self.assertEqual(len(result), 1)
+        html = {"url":"https://fixture.example/", "text":'<a href="/products/sauna">Shop</a> <a href="/pages/about-us">About</a>'}
+        with patch.object(web_fetcher,"fetch_page",side_effect=[html, {"url":"https://fixture.example/pages/about-us","text":"About"}]) as fetch:
+            result = web_fetcher.fetch_website_pages("https://fixture.example/", self.context(name="html-href", max_pages_per_supplier=2))
+        self.assertEqual(fetch.call_args_list[1].args[0], "https://fixture.example/pages/about-us")
+        self.assertEqual(result[1]["url"], "https://fixture.example/pages/about-us")
 
     def test_valid_quotes_survive_one_invented_claim(self):
         pages = [{"url":"https://fixture.example/about", "requested_url":"https://fixture.example",
