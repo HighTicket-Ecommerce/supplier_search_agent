@@ -127,23 +127,30 @@ COUNTRY_LOCATION_CUES = {
 }
 
 
-def prompt_pages(pages, product, *, countries=None):
+def prompt_pages(pages, product, *, countries=None, extra_terms=None):
     # Scan complete captured pages before choosing excerpts; long navigation cannot hide contacts.
-    terms = [re.escape(t) for t in _product_terms(product)]
-    location = [r"headquarters", r"\bhq\b", r"based (?:just )?(?:outside|in|near)",
-                r"head office", r"office address", r"located in", r"our office"]
-    for country in countries or []:
-        location.extend(re.escape(cue) for cue in COUNTRY_LOCATION_CUES.get(country, [country]))
-    patterns = [r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "|".join(location),
-                r"manufactur\w*|own brand|engineer\w*"] + terms
+    terms = _product_terms(product)
+    for extra in extra_terms or []:
+        terms.update(_product_terms(extra))
+    hq = [r"headquarters", r"\bhq\b", r"based (?:just )?(?:outside|in|near)",
+          r"head office", r"office address", r"located in", r"our office"]
+    country = []
+    for name in countries or []:
+        country.extend(re.escape(cue) for cue in COUNTRY_LOCATION_CUES.get(name, [name]))
+    # HQ phrases stay separate so early country-name mentions cannot hide a later FAQ.
+    patterns = ["|".join(hq)]
+    if country:
+        patterns.append("|".join(country))
+    patterns.extend(re.escape(term) for term in sorted(terms, key=len, reverse=True))
+    patterns.extend([r"manufactur\w*|own brand|engineer\w*", r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"])
     result = []
     for page in pages:
         text = page["text"]
         excerpts = [text[:1000]]
         for pattern in patterns:
-            for match in list(re.finditer(pattern, text, re.I))[:3]:
+            for match in list(re.finditer(pattern, text, re.I))[:4]:
                 excerpt = text[max(0, match.start() - 80):match.end() + 220]
                 if excerpt not in excerpts:
                     excerpts.append(excerpt)
-        result.append({"url": page["url"], "excerpts": excerpts[:12]})
+        result.append({"url": page["url"], "excerpts": excerpts[:14]})
     return result

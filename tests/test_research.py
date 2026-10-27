@@ -267,6 +267,11 @@ class ResearchTests(unittest.TestCase):
         self.assertFalse(any("ontario showroom" in excerpt.casefold() for excerpt in germany[0]["excerpts"][1:]))
         self.assertTrue(any("hq is in vaughan" in excerpt.casefold() for excerpt in canada[0]["excerpts"]))
         self.assertTrue(any("hq is in vaughan" in excerpt.casefold() for excerpt in germany[0]["excerpts"]))
+        buried = ("Made in Canada. " * 8) + "you talk to us. coldture hq is in vaughan, ontario, and our support team is in-house."
+        late = web_fetcher.prompt_pages([{"url": "https://coldture.com", "text": buried}],
+                                       "Complete cold plunge systems", countries=["Canada"],
+                                       extra_terms=["chillers sold without a tub"])
+        self.assertTrue(any("hq is in vaughan, ontario" in excerpt.casefold() for excerpt in late[0]["excerpts"]))
 
     def test_targeted_pages_prefer_about_then_count_failed_attempts(self):
         context = self.context(max_pages_per_supplier=3)

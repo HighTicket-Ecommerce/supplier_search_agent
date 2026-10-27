@@ -28,7 +28,8 @@ def analyze_supplier_with_llm(product, pages, context, *, brand_hint=None):
              "identity_hint": brand_hint, "dealer_evidence_required": False}
     messages = [{"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": json.dumps({"research_brief": brief,
-                    "pages": prompt_pages(pages, product, countries=context.request.allowed_countries)},
+                    "pages": prompt_pages(pages, product, countries=context.request.allowed_countries,
+                                         extra_terms=context.request.excluded_products)},
                     ensure_ascii=False)}]
     return request_structured(messages, SupplierAnalysis, context, schema_name="supplier_analysis")
 
