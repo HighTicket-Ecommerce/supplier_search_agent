@@ -20,9 +20,13 @@ def normalize_quote(value):
 _NEGATION = NEGATION
 _NEGATED = re.compile(r"\b" + _NEGATION + r"\b.{0,35}\b(?:based|located|headquartered|headquarters|hq|office)\b|"
                       r"\b(?:headquarters|hq|office)\b.{0,20}\b" + _NEGATION + r"\b", re.I)
+_NON_CURRENT = re.compile(r"\b(?:planned|proposed|future|former|previous|old)\s+(?:headquarters|hq|head office|office)\b|"
+                          r"\b(?:headquarters|hq|head office|office)\b.{0,35}\b(?:will be|opening soon|plan to|planned)\b", re.I)
+_OFFICE_GOODS = re.compile(r"\boffice\s+(?:supplies|products|furniture|equipment|chairs|desks)\b", re.I)
+_COUNTRY_VALUE = re.compile(r"\b(?:United States|USA|Canada|United Kingdom|Great Britain|England|UK|Germany|Deutschland|Australia|China)\b", re.I)
 _SITE_TYPES = [(kind, re.compile(pattern, re.I)) for kind, pattern in [
     ("shipping_or_returns", r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|service area)\b|\b(?:your|enter (?:an?|your))\s+(?:office\s+)?address\b"),
-    ("customer_or_dealer", r"\b(?:customer|testimonial|dealer)\b"),
+    ("customer_or_dealer", r"\b(?:customer|testimonial|dealer)\b|\b(?:supplier|partner|distributor)(?:'s|s')(?=\s|$)|\b(?:supplier|partner|distributor)s?\s+(?:headquarters|hq|head office|office)\b|\bour (?:employees?|staff|team members?|office manager)\b"),
     ("workshop", r"\bworkshops?\b"),
     ("factory", r"\b(?:factory|factories|(?:manufacturing )?plants?|manufacturing facility|production facility)\b"),
     ("warehouse", r"\b(?:warehouse|distribution cent(?:er|re)|fulfil(?:l)?ment)\b"),
@@ -30,7 +34,7 @@ _SITE_TYPES = [(kind, re.compile(pattern, re.I)) for kind, pattern in [
 ]]
 _ORIGIN = re.compile(r"\b(?:born|founded|started|established|originated|assembled|made|handcrafted|manufactured|built|produced|engineered|tested)\b"
                      r".{0,30}\b(?:in|at)\b", re.I)
-_HEAD_OFFICE = re.compile(r"\b(?:headquarters|hq|head office)\b", re.I)
+_HEAD_OFFICE = re.compile(r"\b(?:headquarters|headquartered|hq|head office)\b", re.I)
 _BASED = re.compile(r"\b(?:based|headquartered|located|situated)\s+(?:just\s+)?(?:in|near|outside|at)\s+"
                     r"[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,70}", re.I)
 _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,40},\s*"
@@ -38,9 +42,9 @@ _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,
 _STREET = re.compile(r"\b\d{1,6}\s+[A-Za-z0-9 .'\-]{1,70}\b"
                     r"(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|boulevard|blvd|line|court|ct|place|pl)\b", re.I)
 _SELF_LOCATION = SELF_LOCATION_RE
-_OFFICE_CONTEXT = re.compile(r"\boffice(?: address)?\b(?!\s+(?:hours|phone|email|number|supplies))", re.I)
+_OFFICE_CONTEXT = re.compile(r"\boffice(?: address)?\b(?!\s+(?:hours|phone|email|number|supplies|products|furniture|equipment|chairs|desks|manager))", re.I)
 _NAMED_LOCATION = re.compile(r"(?:\b(?:in|at|near|outside)\s+|:\s*)"
-                             r"(?!(?:our|the|your|this|that|a|an|person|us)\b)[A-Za-z]{2,}", re.I)
+                             r"(?!(?:our|the|your|this|that|a|an|person|us|hq|headquarters|office|offices|workshop|warehouse)\b)[A-Za-z]{2,}", re.I)
 HQ_LOCATION_TYPES = {"headquarters", "office", "company_base"}
 
 
@@ -96,7 +100,7 @@ def location_quote_kind(quote, source="", source_url=""):
     quote = normalize_quote(quote)
     # An independent shipping action is not the subject of the location assertion.
     quote = re.split(r",?\s+(?:and\s+)?(?:we\s+)?(?:ship(?:s|ping)?\s+(?:across|to|worldwide)|offer\s+free\s+shipping)\b", quote, maxsplit=1, flags=re.I)[0]
-    if not quote or _NEGATED.search(quote) or ambiguous_shared_location(quote):
+    if not quote or _NEGATED.search(quote) or _NON_CURRENT.search(quote) or ambiguous_shared_location(quote):
         return "unknown"
     if shared_headquarters(quote):
         if source and any(ambiguous_shared_location(c) for c in _contexts(quote, source)):
@@ -107,16 +111,19 @@ def location_quote_kind(quote, source="", source_url=""):
     explicit_hq, explicit_office = bool(_HEAD_OFFICE.search(quote)), bool(_OFFICE_CONTEXT.search(quote))
     if _ORIGIN.search(quote) and not (explicit_hq or explicit_office):
         return "manufacturing_origin"
-    has_value = bool(_CITY_REGION.search(quote) or _STREET.search(quote) or
+    has_value = bool(_CITY_REGION.search(quote) or _STREET.search(quote) or _COUNTRY_VALUE.search(quote) or
                      ((explicit_hq or explicit_office) and _NAMED_LOCATION.search(quote)))
     contexts = _contexts(quote, source) if source else [quote]
     rejected_kind = "unknown"
     for context in contexts:
-        if _NEGATED.search(context) or ambiguous_shared_location(context):
+        if _NEGATED.search(context) or _NON_CURRENT.search(context) or ambiguous_shared_location(context):
             continue
         prefix = context.casefold().split(quote.casefold(), 1)[0]
         # Check the subject before accepting a clipped "based in" or address quote.
-        if kind := _site_kind(prefix):
+        subject = normalize_quote(prefix + " " + quote)
+        if _OFFICE_GOODS.search(subject):
+            continue
+        if kind := _site_kind(subject):
             rejected_kind = kind
             continue
         if has_value and (explicit_hq or explicit_office):

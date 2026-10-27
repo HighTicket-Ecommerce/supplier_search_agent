@@ -122,7 +122,7 @@ class SupplierAnalysis(BaseModel):
     product_kind: Literal["primary", "bundle_includes_primary", "accessory", "service", "unknown"]
     matched_product_urls: list[str]
     country: str | None
-    country_basis: Literal["headquarters", "manufacturing", "market", "unknown"]
+    country_basis: Literal["headquarters", "office", "company_base", "manufacturing", "market", "unknown"]
     identity_match: Literal["supported", "not_established", "contradicted", "not_requested"]
     email: str | None
     phone: str | None
