@@ -201,6 +201,7 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 
 | Date | Work | Result / evidence |
 | --- | --- | --- |
+| 2026-10-28 | Distributor feasibility preview prepared on `docs/distributor-feasibility` | [Brief](docs/benchmarks/distributors-2026-10-28/brief.md) freezes two Fire Magic distributor leads before the run. Seed-only preview, six page attempts, $4 exposure, isolated jobs, no production changes or exports. Company role, brand listings, brand-side authorization and commercial access are separate questions; live results pending |
 | 2026-10-14 | Feature upgrades and initial controlled previews | [Validation report](docs/validation-2026-10-14.md); 48 tests passed at that time |
 | 2026-10-26 | Added this tracking plan and reran the offline suite | 48 tests passed; no new paid run started |
 | 2026-10-26 | Security review of the October incidents | No compromised packages or committed credentials. Exposed: public backend without authentication, Node 22.22.3/23.10.0, `certifi` and `pip` in `.venv` that still trust the eMudhra roots, advisories in Starlette, Streamlit, requests and python-dotenv |
