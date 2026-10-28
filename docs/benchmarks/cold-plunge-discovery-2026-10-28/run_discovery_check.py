@@ -79,7 +79,9 @@ def main():
         target_suppliers=3, max_candidate_domains=3, max_pages=9, max_pages_per_supplier=3,
         max_runtime_seconds=600, max_external_calls=15, max_execution_cost_usd=6,
         max_actor_charge_usd=0.5)
-    sources = sorted((ROOT / "backend").glob("*.py")) + [Path(__file__).resolve(), Path(__file__).with_name("brief.md")]
+    sources = sorted((ROOT / "backend").glob("*.py")) + [Path(__file__).resolve(), Path(__file__).with_name("brief.md"),
+        Path(__file__).with_name("selection-fix-brief.md"), Path(__file__).with_name("audit_discovery.py"), ROOT / "ui/streamlit_app.py",
+        ROOT / "tests/test_discovery_selection.py"]
     manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources},

@@ -120,6 +120,8 @@ def research_result(job_id: str):
             "limit_reason": job.get("limit_reason"), "research_mode": job["request"].get("research_mode", "supplier_search"),
             "observations": job.get("observations", []), "directory_coverage": job.get("directory_coverage", []),
             "warnings": job.get("warnings", []), "skipped": job.get("skipped", []),
+            "discovery_candidates": job.get("discovery_candidates", []),
+            "discovery_coverage": job.get("discovery_coverage", []),
             "master_reference": job.get("master_reference"), "catalogues": job.get("catalogues", {})}
 
 

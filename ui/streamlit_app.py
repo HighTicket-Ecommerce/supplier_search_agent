@@ -233,6 +233,11 @@ def render_results(result):
         with st.expander("Skipped sites (" + str(len(result["skipped"])) + ")"):
             st.caption("Discovered sites already in the master list, and blocked retailers or marketplaces. Supplied websites are still checked.")
             st.dataframe(pd.DataFrame(result["skipped"]), width="stretch", hide_index=True)
+    if result.get("discovery_candidates"):
+        with st.expander("Discovery selection (" + str(len(result["discovery_candidates"])) + " search results)"):
+            st.caption("Search hints set checking order. Selected sites still need product, company-role and location verification.")
+            st.dataframe(pd.DataFrame(result["discovery_candidates"]), width="stretch", hide_index=True)
+            st.json(result.get("discovery_coverage", []))
     with st.expander("Full evidence and comparison details"):
         st.json({k: result.get(k, []) for k in ["accepted", "review", "rejected", "observations"]})
     qualified = result.get("accepted", [])

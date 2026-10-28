@@ -26,6 +26,8 @@ class ResearchContext:
         self.website_pages = {}
         self.website_failures = {}
         self.fetch_failures = []
+        self.discovery_candidates = []
+        self.discovery_coverage = []
 
     def checkpoint(self):
         job = get_job(self.job_id)
@@ -69,6 +71,36 @@ class ResearchContext:
     def save_catalogue(self, url, catalogue):
         self.catalogues[url] = catalogue
         update_job(self.job_id, catalogues=self.catalogues)
+
+    def save_discovery_selection(self, records, coverage):
+        batch_id = str(len(self.discovery_coverage) + 1)
+        for entry in records:
+            entry["record_id"] = batch_id + ":" + entry["record_id"]
+            if "duplicate_of" in entry:
+                entry["duplicate_of"] = batch_id + ":" + entry["duplicate_of"]
+        self.discovery_candidates.extend(records)
+        self.discovery_coverage.append(dict(coverage, batch_id=batch_id))
+        self._save_discovery()
+
+    def record_discovery_verification(self, item, status):
+        record_id = item.get("record_id")
+        if not record_id:
+            return
+        for entry in self.discovery_candidates:
+            if entry["record_id"] == record_id:
+                entry["verification_status"] = status
+                self._save_discovery()
+                break
+
+    def finish_discovery(self, reason):
+        for entry in self.discovery_candidates:
+            if entry.get("verification_status") == "pending":
+                entry.update(verification_status="not_checked", verification_stop_reason=reason)
+        self._save_discovery()
+
+    def _save_discovery(self):
+        update_job(self.job_id, discovery_candidates=self.discovery_candidates,
+                   discovery_coverage=self.discovery_coverage)
 
     def settle_model(self, operation, cost_usd):
         # Actor billing may lag, so its maximum remains reserved throughout a job.
