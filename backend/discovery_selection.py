@@ -14,8 +14,8 @@ def source_hints(url, title, snippet):
     path = unquote(urlsplit(url).path).lower()
     title = title.lower()
     hints = []
-    if (re.search(r"/(?:blogs?|articles?)(?:/|$)|/(?:best-|top-?\d+)", path)
-            or re.search(r"\b(?:top\s+\d+|best\b.*\b(?:tested|reviewed|of\s+20\d{2}))", title)):
+    if (re.search(r"/(?:blogs?|articles?)(?:/|$)|/(?:best-|(?:20\d{2}[-_])?top[-_]?\d+)", path)
+            or re.search(r"\b(?:top[\s-]*\d+\b|best\b.*\b(?:tested|reviewed|of\s+20\d{2}))", title)):
         hints.append("editorial_comparison")
     if (domain_from_url(url).split(".")[0] in {"help", "support"}
             or re.search(r"/(?:hc|manuals?|support)(?:/|$)", path)):

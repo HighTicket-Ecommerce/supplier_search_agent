@@ -114,6 +114,24 @@ class DiscoverySelectionTests(unittest.TestCase):
         self.assertEqual(chosen[0]["domain"], "company.example")
         self.assertEqual(chosen[0]["source_hints"], [])
 
+    def test_compact_hyphenated_and_year_prefixed_roundups_get_lower_priority(self):
+        for path, title in [("/guide", "2026 Top10 Heater Brands Review"),
+                            ("/guide", "Top-10 Sauna Heaters"),
+                            ("/2025-top10-heater-brands-review", "Heater Guide"),
+                            ("/2026_top_10_heaters", "Heater Guide")]:
+            with self.subTest(path=path, title=title):
+                chosen, records, _ = select([page("manufacturer", row("roundup.example" + path, title=title),
+                    row("company.example"))], limit=1)
+                self.assertEqual(chosen[0]["domain"], "company.example")
+                self.assertIn("editorial_comparison", records[0]["source_hints"])
+                self.assertEqual(records[0]["decision"], "not_selected")
+
+    def test_top_quality_and_numbered_product_names_are_not_roundup_hints(self):
+        for title in ["Top quality sauna heaters", "Desktop10 Heater", "Best selling heater"]:
+            with self.subTest(title=title):
+                chosen, _, _ = select([page("brand", row("company.example", title=title))], limit=1)
+                self.assertEqual(chosen[0]["source_hints"], [])
+
     def test_identity_lookup_retains_organic_order_and_exact_query(self):
         context = self.context()
         pages = [page("identity", row("publisher.example/best-heaters"), row("company.example"))]
