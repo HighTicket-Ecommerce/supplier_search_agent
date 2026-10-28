@@ -16,9 +16,14 @@ sys.path.insert(0, str(ROOT))
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--round", required=True)
+    parser.add_argument("--pages-per-site", type=int, choices=[3, 4], default=3)
+    parser.add_argument("--max-pages", type=int, help="Optional lower global page cap, including browser attempts")
     args = parser.parse_args()
     if not args.round or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in args.round):
         parser.error("Use letters, digits, hyphens and underscores in round names")
+    page_cap = args.max_pages if args.max_pages is not None else min(7, args.pages_per_site * 2)
+    if not 2 <= page_cap <= 7:
+        parser.error("Global page cap must be 2–7 to retain the $4 exposure ceiling")
     cases_path = Path(__file__).with_name("cases.json")
     cases = json.loads(cases_path.read_text())
     output = ROOT / "var" / "eval" / cases["id"] / args.round
@@ -36,14 +41,18 @@ def main():
         excluded_products=["accessories", "replacement parts", "charcoal grills", "electric grills"],
         use_apify=False, use_shopping=False, use_shopify_catalogue=False, preview_only=True,
         allow_browser_fallback=True, target_suppliers=2, max_candidate_domains=2,
-        max_pages=6, max_pages_per_supplier=3, max_external_calls=12,
+        max_pages=page_cap, max_pages_per_supplier=args.pages_per_site, max_external_calls=12,
         max_runtime_seconds=600, max_execution_cost_usd=4, max_actor_charge_usd=0.5)
     sources = sorted(ROOT.glob("backend/*.py")) + [Path(__file__).resolve(), cases_path, cases_path.with_name("brief.md")]
+    if (followup := cases_path.with_name("collection-fix-brief.md")).exists():
+        sources.append(followup)
     manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "case_ids": [c["id"] for c in cases["cases"]],
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources},
-        "sheets_writes": 0, "production_changes": False}
+        "sheets_writes": 0,
+        "production_changes_since_feasibility": bool(subprocess.check_output(
+            ["git", "diff", "ba6cef9", "--", "backend", "ui"], cwd=ROOT, text=True))}
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
         output.mkdir()

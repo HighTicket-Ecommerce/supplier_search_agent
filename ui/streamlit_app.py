@@ -292,7 +292,8 @@ with st.expander("Master supplier list"):
     master_id = st.selectbox("Compare against", [None] + list(master_by_id), disabled=is_running,
         format_func=lambda value: "No master comparison" if value is None else master_by_id[value]["filename"] + " (" + str(master_by_id[value]["record_count"]) + " rows)")
 
-product = (st.text_input("Product", placeholder="e.g., Complete cold plunge systems, sauna heaters", disabled=is_running)
+product = (st.text_input("Product", placeholder="e.g., Complete cold plunge systems, sauna heaters", disabled=is_running,
+                         help="Describe the product you need. Put exclusions in Excluded products under Research controls.")
            if workflow != "list_compare" else "Supplier list comparison")
 selected_countries = st.multiselect("Supplier headquarters", COUNTRY_OPTIONS, default=["United States", "Canada"], disabled=is_running)
 selected_roles = st.multiselect("Company roles", ["Manufacturer", "Brand owner", "Distributor", "Retailer"],
@@ -324,7 +325,8 @@ with st.expander("Research controls"):
     target = st.number_input("Qualified candidates to find", min_value=1, max_value=100, value=5, disabled=is_running)
     max_candidates = st.number_input("Maximum candidates", min_value=1, max_value=200, value=20, disabled=is_running)
     max_pages = st.number_input("Maximum website pages across the run", min_value=1, max_value=200, value=30, disabled=is_running)
-    per_supplier = st.number_input("Maximum pages per supplier", min_value=1, max_value=8, value=3, disabled=is_running)
+    per_supplier = st.number_input("Maximum pages per supplier", min_value=1, max_value=8, value=3, disabled=is_running,
+        help="For distributor-only checks, allow four pages to cover the product range, wholesale policy and company details. Browser fallback also counts toward this limit.")
     max_seconds = st.number_input("Maximum run time (seconds)", min_value=10, max_value=1800, value=300, disabled=is_running)
     max_calls = st.number_input("Maximum service calls", min_value=1, max_value=300, value=50, disabled=is_running)
     budget = st.number_input("Execution budget (USD)", min_value=0.5, max_value=100.0, value=5.0, step=0.5, disabled=is_running,

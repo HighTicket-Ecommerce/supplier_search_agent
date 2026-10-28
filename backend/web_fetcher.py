@@ -2,7 +2,7 @@ import hashlib
 from html.parser import HTMLParser
 import re
 import time
-from urllib.parse import urljoin, urlsplit, urldefrag, unquote
+from urllib.parse import urljoin, urlsplit, urldefrag, unquote, parse_qsl
 
 from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
@@ -77,16 +77,28 @@ class PageHTML(HTMLParser):
 
 
 def _product_terms(product):
-    return {t.rstrip("s") for t in re.findall(r"\w+", (product or "").casefold()) if len(t) > 3}
+    # Exclusions are evidence for the model, never positive navigation keywords.
+    positive = re.split(r"\b(?:excluding|except(?: for)?|but not)\b", product or "", maxsplit=1, flags=re.I)[0]
+    words = re.findall(r"\w+", positive.casefold().replace("_", " "))
+    return {t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t
+            for t in words if len(t) >= 3 and t not in {"and", "the", "for", "with", "our", "not"}}
 
 
 def _positive_product_brief(product):
     return positive_brief(product)
 
 
-def _page_priority(url, product, label=""):
-    path = urlsplit(url).path.casefold()
+def _page_priority(url, product, label="", *, excluded_products=None, trade_policy=False):
+    parsed = urlsplit(url)
+    path = unquote(parsed.path).casefold()
     if re.search(r"\.(?:jpe?g|png|webp|gif|svg|ico|css|js|json|pdf|zip|mp4|woff2?)$", path) or re.search(r"/(?:cdn|assets)/", path):
+        return None
+    # Only public entry/policy pages are candidates; account actions stay excluded.
+    public_entry = bool(re.fullmatch(r"/(?:account/(?:login|register)|login|register|sign-in)/?", path))
+    public_query = all(key.casefold() == "returnurl" for key, _ in parse_qsl(parsed.query, keep_blank_values=True))
+    if trade_policy and public_entry and public_query:
+        return (3, 0)
+    if re.search(r"logout|password|reset|delete|subscribe", path):
         return None
     if re.search(r"privacy|terms|checkout|cart|login|account|shipping|refund|returns|blog|news", path):
         return None
@@ -102,12 +114,32 @@ def _page_priority(url, product, label=""):
     collection_path = bool(re.search(r"/collections?/|/catalog|/shop", path))
     if not product_path and not collection_path and re.search(r"protocol|buying-guide|how-to|health-benefit", path):
         return None
-    hits = sum(term in (path + " " + label.casefold()) for term in terms)
-    if product_path or collection_path or any(term in path for term in terms):
+    # Decode category facets and match whole words: Fire must not match fireplaces,
+    # and the three-letter product word "gas" must distinguish gas from charcoal.
+    target = unquote(parsed.path + " " + parsed.query) + " " + label
+    target_terms = _product_terms(target)
+    hits = len(terms & target_terms)
+    if product_path or collection_path or hits:
         # A matching collection/product beats an editorial landing page or unrelated product.
         tier = (0 if product_path else 1) if hits else 3
         if not product_path and not collection_path:
             tier = 2
+        # Inspect the item/category subject, before included extras. A grill with
+        # accessories still outranks accessories for a grill.
+        subjects = [re.split(r"\b(?:with|including|includes?)\b", value, maxsplit=1, flags=re.I)[0]
+                    for value in [label, unquote(parsed.path).rsplit("/", 1)[-1].replace("-", " "), unquote(parsed.query)]]
+        subject_terms = [_product_terms(value) for value in subjects]
+        for exclusion in excluded_products or []:
+            # Broad category exclusions must not bury a potentially relevant
+            # dual-purpose product (e.g. a hot/cold tub). The model evaluates
+            # those contents; only explicit accessory/service product subjects
+            # are demoted here, alongside excluded category/facet links.
+            if product_path and not re.search(r"\b(?:accessor\w*|parts?|replacements?|filters?|covers?|services?)\b", exclusion, re.I):
+                continue
+            excluded = _product_terms(exclusion)
+            if excluded and not excluded <= terms and any(excluded <= subject for subject in subject_terms):
+                tier += 4
+                break
         if re.search(r"complete|system", product, re.I) and re.search(r"cold|plunge", product, re.I):
             # "All-in-one plunge filter" names an accessory, even with system keywords.
             # Inspect the item slug/label, not a parent collection or included extras.
@@ -139,7 +171,7 @@ def _page_priority(url, product, label=""):
     return None
 
 
-def evidence_links(html, text, source_url, product):
+def evidence_links(html, text, source_url, product, *, excluded_products=None, trade_policy=False):
     parser = PageHTML()
     parser.feed((html or "")[:MAX_HTML_CHARS])
     candidates = list(parser.links)
@@ -153,17 +185,19 @@ def evidence_links(html, text, source_url, product):
         if domain_from_url(target) != domain_from_url(source_url) or target.rstrip("/") == source_url.rstrip("/"):
             continue
         label = re.sub(r"\s+", " ", label).strip()[:200]
-        rank = _page_priority(target, product, label)
+        rank = _page_priority(target, product, label, excluded_products=excluded_products, trade_policy=trade_policy)
         if rank is None:
             continue
         links.setdefault(target, {"url": target, "label": label, "discovered_from": source_url})
-    ordered = sorted(links.values(), key=lambda row: (_page_priority(row["url"], product, row["label"]), len(row["url"])))
+    ordered = sorted(links.values(), key=lambda row: (_page_priority(row["url"], product, row["label"],
+                     excluded_products=excluded_products, trade_policy=trade_policy), len(row["url"])))
     return ordered[:MAX_LINKS], parser
 
 
 def _read_page(url, context, tool):
     context.take_page()
-    key = (url, tool, "html-evidence-v1", context.request.product)
+    trade_policy = context.request.allowed_supplier_types == ["Distributor"]
+    key = (url, tool, "html-evidence-v2", context.request.product, tuple(context.request.excluded_products), trade_policy)
     cached = _CACHE.get(key)
     if cached and time.time() - cached[0] < 3600:
         return dict(cached[1], cache_hit=True)
@@ -189,7 +223,8 @@ def _read_page(url, context, tool):
         return None
     if is_search_destination(loaded_url) or is_blocked_domain(domain_from_url(loaded_url)):
         return None
-    links, parser = evidence_links(html, body, loaded_url, context.request.product)
+    links, parser = evidence_links(html, body, loaded_url, context.request.product,
+        excluded_products=context.request.excluded_products, trade_policy=trade_policy)
     visible_text = "".join(parser.parts).strip()
     body = visible_text or body
     if not body.strip():
@@ -234,17 +269,23 @@ def fetch_website_pages(base_url, context):
     domain = domain_from_url(first["url"])
     seen = {base_url.rstrip("/"), first["url"].rstrip("/")}
     candidates = {}
+    trade_policy = context.request.allowed_supplier_types == ["Distributor"]
 
     def discover(page):
         # Read legacy Markdown fixtures as well as the separately captured HTML anchors.
-        links = page.get("links", []) + evidence_links("", page["text"], page["url"], context.request.product)[0]
+        links = page.get("links", []) + evidence_links("", page["text"], page["url"], context.request.product,
+            excluded_products=context.request.excluded_products, trade_policy=trade_policy)[0]
         for link in links:
             target = link["url"]
             if domain_from_url(target) != domain or target.rstrip("/") in seen:
                 continue
-            rank = _page_priority(target, context.request.product, link.get("label", ""))
+            rank = _page_priority(target, context.request.product, link.get("label", ""),
+                excluded_products=context.request.excluded_products, trade_policy=trade_policy)
             if rank is not None:
-                candidates.setdefault(target, dict(link, rank=rank, kind="hq" if rank[0] < 2 else "product" if rank[0] == 2 else "dealer"))
+                if trade_policy and rank[0] == 3 and "trade" in attempted_kinds:
+                    continue
+                candidates.setdefault(target, dict(link, rank=rank, kind="hq" if rank[0] < 2 else "product" if rank[0] == 2
+                                                   else "trade" if trade_policy else "dealer"))
 
     discover(first)
     while candidates and attempts < context.request.max_pages_per_supplier and context.pages < context.request.max_pages:
@@ -256,8 +297,14 @@ def fetch_website_pages(base_url, context):
         location_hint = any(has_address_lead(p["text"]) for p in pages) or (
             bool(cues) and any(re.search(r",\s*(?:"+"|".join(cues)+r")\b", p["text"], re.I) for p in pages))
         kinds = {c["kind"] for c in candidates.values()}
+        # This only schedules evidence collection; a wholesale word does not
+        # qualify the company or prove any particular brand relationship.
+        needs_trade = trade_policy and not any(re.search(
+            r"\bwholesale (?:trade(?: only)?|distributor|only)\b|\btrade (?:customers )?only\b", p["text"], re.I) for p in pages)
         if needs_hq and "hq" in kinds and ("hq" not in attempted_kinds or "product" in attempted_kinds):
             preferred = "hq"
+        elif needs_trade and "trade" in kinds and "trade" not in attempted_kinds and ("product" in attempted_kinds or "product" not in kinds):
+            preferred = "trade"
         elif "product" in kinds:
             preferred = "product"
         else:
@@ -266,12 +313,14 @@ def fetch_website_pages(base_url, context):
             candidate = candidates[url]
             contact = bool(re.search(r"contact", urlsplit(url).path, re.I))
             return (candidate["kind"] != preferred,
-                    not contact if preferred == "hq" and location_hint else False,
+                    not contact if preferred == "hq" and location_hint and not trade_policy else False,
                     candidate["rank"], len(urlsplit(url).path), url)
         target = min(candidates, key=selection_rank)
         candidate = candidates.pop(target)
         seen.add(target.rstrip("/"))
         attempted_kinds.add(candidate["kind"])
+        if candidate["kind"] == "trade":
+            candidates = {key: value for key, value in candidates.items() if value["kind"] != "trade"}
         before = context.pages
         try:
             page = fetch_page(target, context, attempts_left=context.request.max_pages_per_supplier-attempts)
@@ -349,7 +398,7 @@ def prompt_pages(pages, product, *, countries=None, extra_terms=None):
         add(product_windows, 5)
         add(_windows(text, r"manufactur\w*|own brand|engineer\w*|our brand|we design|brand owner|"
                      r"\b(?:we|\w+) (?:distribute|distributes|supply third[ -]party)|authorized distributor|"
-                     r"\b(?:retailer|reseller|marketplace|publisher)\b", after=500), 2)
+                     r"\bwholesale\b|\btrade only\b|\b(?:retailer|reseller|marketplace|publisher)\b", after=500), 2)
         add(_windows(text, r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", after=180), 1)
         if country:
             add(_windows(text, "|".join(country), after=400), 1)
@@ -358,7 +407,7 @@ def prompt_pages(pages, product, *, countries=None, extra_terms=None):
             if extra:
                 add(_windows(text, extra, after=300), 1)
         product_links = [link for link in page.get("links", [])
-                         if (rank := _page_priority(link["url"], product, link.get("label", ""))) and rank[0] == 2]
-        product_links.sort(key=lambda link: _page_priority(link["url"], product, link.get("label", "")))
+                         if (rank := _page_priority(link["url"], product, link.get("label", ""), excluded_products=extra_terms)) and rank[0] == 2]
+        product_links.sort(key=lambda link: _page_priority(link["url"], product, link.get("label", ""), excluded_products=extra_terms))
         result.append({"url": page["url"], "excerpts": excerpts[:14], "observed_product_links": product_links[:10]})
     return result
