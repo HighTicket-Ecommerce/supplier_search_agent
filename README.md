@@ -19,6 +19,8 @@ Use **one backend worker**. SQLite jobs live in ignored `var/research_jobs.sqlit
 
 ## Research workflow
 
+New searches default to **Manufacturer** and **Brand owner** in both the UI and API. Discovery queries follow the selected company roles. Select **Distributor** explicitly for the [optional review workflow](docs/distributor-workflow.md); brand/product authorization and commercial terms still need separate evidence. Saved jobs and requests with explicit roles retain their settings.
+
 1. Enter the requested product, exclusions and allowed supplier headquarters.
 2. Optionally supply website URLs. Seeds are processed before discovery; disable additional discovery for a seed-only run.
 3. Google Search discovers candidates in each selected country, one results page per query. Shopping is optional and off by default. Shopping titles, merchants and product URLs are hints, not verified brands or official supplier sites. When enabled, additional searches propose company sites and qualification requires identity evidence.
@@ -43,6 +45,8 @@ Discovered sites whose exact website host is already in the selected master list
 Choose **Compare supplier lists** for a deterministic comparison of up to 2,000 supplied rows, using a CSV or one name per line. It uses no actor/model calls and produces observations rather than qualified suppliers. CSV headers may be `Supplier`, `supplier_name`, `SUPPLIERS`, `name` or `brand`, plus optional `Website`/`url`. Master imports allow up to 50,000 rows and 15 MB.
 
 ## Distributor research
+
+To check a distributor company, choose **Research suppliers** and select only **Distributor** under Company roles. Start with the [bounded optional workflow](docs/distributor-workflow.md); current distributor qualification limitations are documented there.
 
 Choose **Extract distributor brands**, enter directory URLs and optionally select a master reference. Extraction preserves each label and its source before any official-site qualification. It deduplicates repeated links within a directory while retaining aliases as separate observations.
 

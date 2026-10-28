@@ -57,7 +57,7 @@ class ResearchRequest(BaseModel):
     allowed_countries: list[str] = Field(default_factory=lambda: ["United States", "Canada"])
     excluded_products: list[str] = Field(default_factory=list, max_length=30)
     allowed_supplier_types: list[Literal["Manufacturer", "Brand owner", "Distributor", "Retailer"]] = Field(
-        default_factory=lambda: ["Manufacturer", "Brand owner", "Distributor"], min_length=1
+        default_factory=lambda: ["Manufacturer", "Brand owner"], min_length=1
     )
     max_pages: int = Field(default=30, ge=1, le=200)
     max_pages_per_supplier: int = Field(default=3, ge=1, le=8)

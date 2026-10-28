@@ -159,6 +159,27 @@ class ResearchTests(unittest.TestCase):
             apify_runner.run_serp_discovery("Sauna", context, country="United Kingdom", limit=1)
         self.assertEqual(actor.call_args.args[1]["countryCode"], "gb")
 
+    def test_discovery_job_searches_only_the_requested_company_roles(self):
+        for name, roles, expected in [
+            ("primary", None, ["Sauna heaters manufacturer", "Sauna heaters brand official website"]),
+            ("distributor", ["Distributor"], ["Sauna heaters wholesale distributor"]),
+            ("retailer", ["Retailer"], ["Sauna heaters retailer official website"]),
+        ]:
+            with self.subTest(name=name):
+                options = {"allowed_supplier_types": roles} if roles else {}
+                context = self.context(name=name, allowed_countries=["United States"], **options)
+                with patch.object(apify_runner, "run_actor", return_value=[]) as actor:
+                    research_runner.run_research_job(name, context.request)
+                self.assertEqual(actor.call_count, 1)
+                self.assertEqual(actor.call_args.args[1]["queries"].splitlines(), expected)
+                self.assertEqual(job_store.get_job(name)["status"], "completed")
+
+    def test_official_brand_lookup_keeps_its_identity_query_in_distributor_mode(self):
+        context = self.context(allowed_supplier_types=["Distributor"])
+        with patch.object(apify_runner, "run_actor", return_value=[]) as actor:
+            apify_runner.run_serp_brand_lookup("Fire Magic", "Gas grills", context)
+        self.assertEqual(actor.call_args.args[1]["queries"], "Fire Magic Gas grills official website")
+
     def test_blocklist_matches_labels_not_substrings(self):
         self.assertFalse(hasattr(filters, "TLD_COUNTRY"))
         kept = ["fellowes.com", "championtarget.com", "betsy.com", "abbc.com", "notlowes.com"]

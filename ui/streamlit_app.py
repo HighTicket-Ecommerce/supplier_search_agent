@@ -297,7 +297,8 @@ product = (st.text_input("Product", placeholder="e.g., Complete cold plunge syst
            if workflow != "list_compare" else "Supplier list comparison")
 selected_countries = st.multiselect("Supplier headquarters", COUNTRY_OPTIONS, default=["United States", "Canada"], disabled=is_running)
 selected_roles = st.multiselect("Company roles", ["Manufacturer", "Brand owner", "Distributor", "Retailer"],
-                                default=["Manufacturer", "Brand owner", "Distributor"], disabled=is_running)
+                                default=["Manufacturer", "Brand owner"], disabled=is_running,
+                                help="Select Distributor alone for an optional distributor review.")
 seed_text, directory_text, comparison_rows, verify_brands = "", "", [], False
 use_discovery = False
 if workflow == "supplier_search":
