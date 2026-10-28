@@ -18,3 +18,11 @@ Discovery, Shopping, Shopify catalogue analysis and exports remain disabled. Use
 ```sh
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python docs/benchmarks/distributors-2026-10-28/run_preview.py --round collection-fix-1 --pages-per-site 4 --max-pages 7
 ```
+
+## Targeted follow-up after the first preview
+
+The first preview captured the correct product categories, but Rutherford's company-location routing hint stayed false even though its About text included headquarters evidence. That scheduled a second company page before the missing policy. Keep the location qualification rules unchanged; give an unattempted trade policy priority after one company/product pass. Add a thirteenth regression and rerun only Rutherford with four page attempts. Preserve the first preview as a partial collection result.
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python docs/benchmarks/distributors-2026-10-28/run_preview.py --round collection-fix-rutherford-2 --cases rutherford-fire-magic --pages-per-site 4 --max-pages 4
+```

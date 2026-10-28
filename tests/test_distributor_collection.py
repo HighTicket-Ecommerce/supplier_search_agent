@@ -124,6 +124,24 @@ class DistributorCollectionTests(unittest.TestCase):
         self.assertEqual(context.pages, 2)
         self.assertEqual(pages, [home])
 
+    def test_missing_policy_precedes_second_company_page_after_product(self):
+        home = {"url": "https://example.com/brands/grills", "text": "Brand catalogue", "links": [
+            {"url": "https://example.com/about", "label": "About Us"},
+            {"url": "https://example.com/contact", "label": "Contact Us"},
+            {"url": "https://example.com/products/gas-grill", "label": "Gas Grill"},
+            {"url": "https://example.com/account/login", "label": "Sign in"}]}
+        bodies = {home["url"]: home, **{link["url"]: {"url": link["url"], "text": "Company/product details; location unverified"}
+                                        for link in home["links"]}}
+        context = self.context(max_pages_per_supplier=4, max_pages=4)
+        def fetch(url, ctx, **kwargs):
+            ctx.take_page()
+            return bodies[url]
+        with patch.object(web_fetcher, "fetch_page", side_effect=fetch) as call:
+            web_fetcher.fetch_website_pages(home["url"], context)
+        self.assertEqual([c.args[0] for c in call.call_args_list],
+                         [home["url"], home["links"][0]["url"], home["links"][2]["url"], home["links"][3]["url"]])
+        self.assertEqual(context.pages, 4)
+
     def test_wholesale_navigation_label_does_not_replace_a_policy_page(self):
         home = {"url": "https://example.com/", "text": "Wholesale\nProducts\nContact", "links": [
             {"url": "https://example.com/account/login", "label": "Sign in"}]}

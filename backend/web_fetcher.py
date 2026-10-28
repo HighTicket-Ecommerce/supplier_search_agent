@@ -301,10 +301,12 @@ def fetch_website_pages(base_url, context):
         # qualify the company or prove any particular brand relationship.
         needs_trade = trade_policy and not any(re.search(
             r"\bwholesale (?:trade(?: only)?|distributor|only)\b|\btrade (?:customers )?only\b", p["text"], re.I) for p in pages)
-        if needs_hq and "hq" in kinds and ("hq" not in attempted_kinds or "product" in attempted_kinds):
-            preferred = "hq"
-        elif needs_trade and "trade" in kinds and "trade" not in attempted_kinds and ("product" in attempted_kinds or "product" not in kinds):
+        # After one company page and one product page, collect the missing
+        # policy before a second company page can consume the final slot.
+        if needs_trade and "trade" in kinds and "trade" not in attempted_kinds and ("product" in attempted_kinds or "product" not in kinds):
             preferred = "trade"
+        elif needs_hq and "hq" in kinds and ("hq" not in attempted_kinds or "product" in attempted_kinds):
+            preferred = "hq"
         elif "product" in kinds:
             preferred = "product"
         else:
