@@ -1,0 +1,78 @@
+{
+  "source_round": "office-country-1",
+  "fixture_kind": "Literal paragraph excerpts and reconstructed saved analysis; no new model judgment",
+  "original_status": "qualified",
+  "original_reason": "requested_product_role_and_market_supported",
+  "product": "Complete cold plunge systems",
+  "pages": [
+    {
+      "url": "https://penguinchillers.com/",
+      "requested_url": "https://www.penguinchillers.com",
+      "text": "Penguin Chillers\nProudly made in Tennessee, Penguin Chillers builds high-quality water and glycol chillers trusted for cold therapy, aquatics, and commercial use.\nPenguin Chillers\n\n            American Owned and Operated — Penguin Chillers manufactures chillers in Knoxville, Tennessee USA and is an official member of the Made in Tennessee program, recognizing products built locally with verified Tennessee craftsmanship.\n\n      Knoxville, TN 37932\n\n          Address\n          10315 Cogdill Rd\n          Knoxville, TN 37932",
+      "original_text_sha256": "ba941cbef80ced7a06ddbcccb5aea186844fc469f5be7cc3939e2b026a61d9ce"
+    },
+    {
+      "url": "https://penguinchillers.com/collections/cold-therapy",
+      "requested_url": "https://penguinchillers.com/collections/cold-therapy",
+      "text": "Cold Therapy Chillers | Made in Tennessee | Penguin Chillers\nCold therapy chillers and complete cold plunge systems built in Tennessee, USA. Maintain consistent water temperatures without daily ice purchases.\nCold Therapy Chillers | Made in Tennessee | Penguin Chillers\n\nFor a complete system, Summit is our top pick: an integrated chiller, stainless tub, filtration, and insulated cover in one finished setup.\n\nOur top pick for a complete plunge: an integrated chiller, stainless tub, filtration, and insulated cover in one finished setup.\n\n        Which complete cold plunge is best?\nSummit is our top recommendation for a complete all-in-one cold plunge, combining an integrated chiller, stainless tub, filtration, and insulated cover. Journey is the portable inflatable choice, and Pursuit is the premium acrylic option with an external chiller.",
+      "original_text_sha256": "cd535f84d746903fa28544acb169fb4659df5c7bad77504711975f5a59a50f24"
+    },
+    {
+      "url": "https://penguinchillers.com/products/summit-cold-plunge",
+      "requested_url": "https://penguinchillers.com/products/summit-cold-plunge",
+      "text": "All-in-One Premium Cold Plunge\n – Penguin Chillers\nThe Beyond Cold Summit Cold Plunge pairs premium cold therapy with Penguin Chillers' proven cooling technology. Built in Tennessee with U.S. support.\nAll-in-One Premium Cold Plunge\n – Penguin Chillers\n\n           A luxury look without needing a separate tub and chiller setup.",
+      "original_text_sha256": "93b9f44cc97cd49e99819ea925a4188a0191977756d3d716252d7af0b746d751"
+    }
+  ],
+  "analysis": {
+    "supplier_type": "Manufacturer",
+    "product_match": "supported",
+    "product_kind": "primary",
+    "matched_product_urls": [
+      "https://penguinchillers.com/products/summit-cold-plunge",
+      "https://penguinchillers.com/collections/cold-therapy"
+    ],
+    "country": "United States",
+    "country_basis": "office",
+    "confidence": 0.78,
+    "notes": "Evidence supports manufacturer role for chillers. Complete cold plunge system supported via Summit being described as integrated and not needing separate tub and chiller setup. Location evidence establishes a Knoxville office address (United States), not explicit HQ. Owns_brand left null because excerpts describe Beyond Cold as a brand but do not explicitly state ownership by Penguin Chillers.",
+    "is_product_company": true,
+    "company_name": "Penguin Chillers",
+    "owns_brand": null,
+    "identity_match": "not_requested",
+    "email": null,
+    "phone": null,
+    "evidence": [
+      {
+        "claim": "role",
+        "source_url": "https://penguinchillers.com/",
+        "quote": "Penguin Chillers manufactures chillers in Knoxville, Tennessee USA"
+      },
+      {
+        "claim": "product_match",
+        "source_url": "https://penguinchillers.com/collections/cold-therapy",
+        "quote": "complete cold plunge systems built in Tennessee, USA."
+      },
+      {
+        "claim": "product_match",
+        "source_url": "https://penguinchillers.com/collections/cold-therapy",
+        "quote": "integrated chiller, stainless tub, filtration, and insulated cover"
+      },
+      {
+        "claim": "product_match",
+        "source_url": "https://penguinchillers.com/products/summit-cold-plunge",
+        "quote": "A luxury look without needing a separate tub and chiller setup."
+      },
+      {
+        "claim": "country",
+        "source_url": "https://penguinchillers.com/",
+        "quote": "Knoxville, TN 37932"
+      },
+      {
+        "claim": "role",
+        "source_url": "https://penguinchillers.com/",
+        "quote": "Proudly made in Tennessee, Penguin Chillers builds high-quality"
+      }
+    ]
+  }
+}

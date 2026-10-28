@@ -35,13 +35,14 @@ class ProductComponentTests(unittest.TestCase):
         job_store.init_job(job_id, request.model_dump())
         context = ResearchContext(job_id, request)
         body = text if text is not None else "\n\n".join(quotes)
+        # Keep the role explicit so these tests isolate component inclusion.
         pages = [{"url": url, "text": title + "\n\n" + body +
-                  "\n\nWe manufacture our own products.\n\nHeadquarters: Toronto, Ontario"}] + (extra_pages or [])
+                  "\n\nWe manufacture cold plunge systems.\n\nHeadquarters: Toronto, Ontario"}] + (extra_pages or [])
         evidence = [{"claim": "product_match", "source_url": url, "quote": quote} for quote in quotes]
         for page in extra_pages or []:
             evidence.extend({"claim": "product_match", "source_url": page["url"], "quote": quote}
                             for quote in page.get("test_quotes", []))
-        evidence += [{"claim": "role", "source_url": url, "quote": "We manufacture our own products"},
+        evidence += [{"claim": "role", "source_url": url, "quote": "We manufacture cold plunge systems"},
                      {"claim": "country", "source_url": url, "quote": "Headquarters: Toronto, Ontario"}]
         analysis = {"is_product_company": True, "company_name": "Example", "supplier_type": "Manufacturer", "owns_brand": True,
                     "product_match": "supported", "product_kind": "primary", "matched_product_urls": [p["url"] for p in pages],

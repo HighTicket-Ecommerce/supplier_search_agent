@@ -205,7 +205,9 @@ class ResearchTests(unittest.TestCase):
                 with patch.object(supplier_validator,"fetch_website_pages",return_value=fixture["pages"]), \
                      patch.object(supplier_validator,"analyze_supplier_with_llm",return_value=fixture["analysis"]):
                     result = supplier_validator.process_supplier(fixture["product"],fixture["pages"][0]["url"],context)
-                self.assertEqual(result["status"], fixture["expected"])
+                self.assertEqual(result["status"], fixture.get("expected_with_product_role_check", fixture["expected"]))
+                if "expected_reason_with_product_role_check" in fixture:
+                    self.assertEqual(result["reason"], fixture["expected_reason_with_product_role_check"])
                 self.assertIsNone(result["estimated_price_min"])
                 self.assertTrue(result["sources"])
 

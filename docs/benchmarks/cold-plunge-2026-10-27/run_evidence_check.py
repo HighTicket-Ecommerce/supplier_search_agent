@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--pages-per-site", type=int, default=3, choices=range(1, 5))
     parser.add_argument("--budget", type=float, default=4.0)
     parser.add_argument("--browser-fallback", action="store_true", help="Try one browser fetch after an empty/thin raw page, within the same limits")
+    parser.add_argument("--primary-roles-only", action="store_true", help="Use the current manufacturer/brand-owner policy without editing frozen labels")
     args = parser.parse_args()
     if not 1 <= len(args.cases) <= 3 or len(set(args.cases)) != len(args.cases):
         parser.error("Select 1–3 distinct development/anchor cases per bounded batch")
@@ -41,13 +42,14 @@ def main():
     from backend.job_store import get_job, init_job
     from backend.models import ResearchRequest
     from backend.research_runner import run_research_job
-    from backend import web_fetcher
+    from backend import supplier_validator, web_fetcher
     from backend.master_index import load_reference
     from backend.config import model_settings_snapshot
     if args.master_reference_id:
         load_reference(args.master_reference_id)
     request = ResearchRequest(product=labels["product"], candidate_urls=[lookup[i]["url"] for i in args.cases],
-        allowed_countries=labels["allowed_countries"], allowed_supplier_types=labels["allowed_roles"],
+        allowed_countries=labels["allowed_countries"],
+        allowed_supplier_types=["Manufacturer", "Brand owner"] if args.primary_roles_only else labels["allowed_roles"],
         excluded_products=["replacement filters", "assembly services", "chillers sold without a tub",
                            "inflatable tubs without a chiller", "sauna heaters", "hot tubs"],
         use_apify=False, use_shopping=False, preview_only=True, use_shopify_catalogue=False,
@@ -55,9 +57,9 @@ def main():
         target_suppliers=len(args.cases), max_candidate_domains=len(args.cases),
         max_pages=args.pages_per_site*len(args.cases), max_pages_per_supplier=args.pages_per_site,
         max_runtime_seconds=600, max_external_calls=20, max_execution_cost_usd=args.budget)
-    sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/country_evidence.py", "backend/product_evidence.py", "backend/role_evidence.py", "backend/supplier_validator.py",
+    sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/country_evidence.py", "backend/product_evidence.py", "backend/product_role_evidence.py", "backend/role_evidence.py", "backend/supplier_validator.py",
                "backend/models.py", "backend/model_client.py", "backend/research_runner.py", "backend/actor_client.py",
-               "docs/benchmarks/cold-plunge-2026-10-27/run_evidence_check.py"]
+               "docs/benchmarks/cold-plunge-2026-10-27/run_evidence_check.py", "docs/benchmarks/cold-plunge-2026-10-27/product-role-brief.md"]
     manifest = {"started_at": time.time(), "case_ids": args.cases, "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {path: hashlib.sha256((ROOT/path).read_bytes()).hexdigest() for path in sources},
@@ -100,10 +102,19 @@ def main():
                            actor_run_ids=[o["run_id"] for o in context.operations[operation_start:] if o.get("run_id")])
             (output / "fetch_attempts.json").write_text(json.dumps(attempts, indent=2))
     web_fetcher._read_page = traced_read
+    analyses = []
+    original_analyze = supplier_validator.analyze_supplier_with_llm
+    def traced_analyze(product, pages, context, **kwargs):
+        analysis = original_analyze(product, pages, context, **kwargs)
+        analyses.append({"url": pages[0]["url"], "analysis": analysis})
+        (output / "model_analyses.json").write_text(json.dumps(analyses, ensure_ascii=False, indent=2))
+        return analysis
+    supplier_validator.analyze_supplier_with_llm = traced_analyze
     try:
         run_research_job(job_id, request)
     finally:
         web_fetcher._read_page = original_read
+        supplier_validator.analyze_supplier_with_llm = original_analyze
     result = get_job(job_id)
     result["job_id"] = job_id
     result["elapsed_seconds"] = round(time.time()-manifest["started_at"], 2)

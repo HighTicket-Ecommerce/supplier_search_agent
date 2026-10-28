@@ -138,6 +138,8 @@
     },
     {
       "id": "coldture_cold_plunge",
+      "expected_with_product_role_check": "review",
+      "expected_reason_with_product_role_check": "requested_product_role_not_established",
       "product": "Complete cold plunge systems",
       "pages": [
         {
