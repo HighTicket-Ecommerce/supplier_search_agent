@@ -20,11 +20,14 @@ def main():
     parser.add_argument("--master-reference-id")
     parser.add_argument("--pages-per-site", type=int, default=3, choices=range(1, 5))
     parser.add_argument("--budget", type=float, default=4.0)
+    parser.add_argument("--browser-fallback", action="store_true", help="Try one browser fetch after an empty/thin raw page, within the same limits")
     args = parser.parse_args()
     if not 1 <= len(args.cases) <= 3 or len(set(args.cases)) != len(args.cases):
         parser.error("Select 1–3 distinct development/anchor cases per bounded batch")
     if not args.round or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in args.round):
         parser.error("Round names use letters, digits, hyphens and underscores")
+    if args.browser_fallback and args.pages_per_site < 2:
+        parser.error("Browser fallback requires at least two page attempts per site")
     labels_path = Path(__file__).with_name("labels.json")
     labels = json.loads(labels_path.read_text())
     lookup = {case["id"]: case for case in labels["cases"] if case["group"] in {"development", "anchor"}}
@@ -47,12 +50,13 @@ def main():
         excluded_products=["replacement filters", "assembly services", "chillers sold without a tub",
                            "inflatable tubs without a chiller", "sauna heaters", "hot tubs"],
         use_apify=False, use_shopping=False, preview_only=True, use_shopify_catalogue=False,
-        allow_browser_fallback=False, master_reference_id=args.master_reference_id,
+        allow_browser_fallback=args.browser_fallback, master_reference_id=args.master_reference_id,
         target_suppliers=len(args.cases), max_candidate_domains=len(args.cases),
         max_pages=args.pages_per_site*len(args.cases), max_pages_per_supplier=args.pages_per_site,
         max_runtime_seconds=600, max_external_calls=20, max_execution_cost_usd=args.budget)
     sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/country_evidence.py", "backend/product_evidence.py", "backend/role_evidence.py", "backend/supplier_validator.py",
-               "backend/models.py", "backend/model_client.py", "backend/research_runner.py", "backend/actor_client.py"]
+               "backend/models.py", "backend/model_client.py", "backend/research_runner.py", "backend/actor_client.py",
+               "docs/benchmarks/cold-plunge-2026-10-27/run_evidence_check.py"]
     manifest = {"started_at": time.time(), "case_ids": args.cases, "settings": request.model_dump(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {path: hashlib.sha256((ROOT/path).read_bytes()).hexdigest() for path in sources},
@@ -72,7 +76,33 @@ def main():
     manifest["job_id"] = job_id
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(json.dumps({"job_id": job_id, "round": args.round, "cases": args.cases, "status": "starting"}), flush=True)
-    run_research_job(job_id, request)
+    attempts = []
+    original_read = web_fetcher._read_page
+    def traced_read(url, context, tool):
+        started = time.monotonic()
+        operation_start = len(context.operations)
+        attempt = {"url": url, "scraping_tool": tool, "status": "started"}
+        attempts.append(attempt)
+        (output / "fetch_attempts.json").write_text(json.dumps(attempts, indent=2))
+        try:
+            page = original_read(url, context, tool)
+            attempt.update(status="page_returned" if page else "no_page", page_returned=bool(page))
+            if page:
+                attempt.update(loaded_url=page["url"], text_chars=len(page["text"]),
+                               main_text_chars=page.get("main_text_chars"), cache_hit=bool(page.get("cache_hit")))
+            return page
+        except Exception as exc:
+            attempt.update(status="error", error_type=type(exc).__name__)
+            raise
+        finally:
+            attempt.update(elapsed_seconds=round(time.monotonic()-started, 3),
+                           actor_run_ids=[o["run_id"] for o in context.operations[operation_start:] if o.get("run_id")])
+            (output / "fetch_attempts.json").write_text(json.dumps(attempts, indent=2))
+    web_fetcher._read_page = traced_read
+    try:
+        run_research_job(job_id, request)
+    finally:
+        web_fetcher._read_page = original_read
     result = get_job(job_id)
     result["job_id"] = job_id
     result["elapsed_seconds"] = round(time.time()-manifest["started_at"], 2)
