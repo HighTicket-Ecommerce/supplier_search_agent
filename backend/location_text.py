@@ -32,6 +32,8 @@ _SHARED = re.compile(r"\b(?:our\s+)?(?P<left>"+_HQ+"|"+_FACILITY+r")\s*(?:and|&)
 
 def _shared_location(text):
     match = _SHARED.search(text)
+    if match and re.search(r"\b(?:customer|supplier|partner|dealer|testimonial)s?(?:'s|s')?\b", text[max(0, match.start()-60):match.start()], re.I):
+        return None
     if match and bool(re.fullmatch(_HQ, match["left"], re.I)) != bool(re.fullmatch(_HQ, match["right"], re.I)):
         return match
     return None

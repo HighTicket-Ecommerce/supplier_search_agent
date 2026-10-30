@@ -3,6 +3,19 @@ from backend import location_evidence, supplier_validator
 
 
 class LocationFollowupTests(unittest.TestCase):
+    def test_shared_headquarters_grammar_accepts_one_place_and_keeps_other_owners_out(self):
+        positives = ["Our headquarters and factory are located in Toronto, Ontario.",
+                     "Our factory and headquarters are in Toronto, Ontario.",
+                     "Our headquarters and factory are both in Toronto, Ontario.",
+                     "Our corporate headquarters and factory are in Toronto, Ontario.",
+                     "Our headquarters and factories are in Toronto, Ontario.",
+                     "Our HQ & factory are in Toronto, Ontario."]
+        negatives = ["Our factory is in Toronto, Ontario.",
+                     "Our customer's headquarters and factory are in Toronto, Ontario."]
+        for text in positives + negatives:
+            with self.subTest(text=text):
+                self.assertEqual(location_evidence.hq_quote_acceptable(text, text), text in positives)
+
     def test_shared_subjects_do_not_assign_the_factory_country_to_headquarters(self):
         for source in ["Our headquarters and factory are in Toronto and Shenzhen, China respectively.",
                        "Our headquarters and factory are in Toronto and Shenzhen, China."]:
