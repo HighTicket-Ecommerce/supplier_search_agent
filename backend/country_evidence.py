@@ -58,6 +58,8 @@ def _location_cards(text, source_url):
                             values.append(following)
                             continue
                         break
+                    if re.search(r"\b(?:shipping|ships?|selling|sells?|deliver\w*|serving|serves?|returns?|exchanges)\b", following, re.I):
+                        break
                     if _ANCHOR.search(following) or len(following.split()) > 16:
                         break
                     # Only address-like values or a short proper place name can bind a label.
