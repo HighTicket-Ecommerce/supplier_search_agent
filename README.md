@@ -34,6 +34,8 @@ For complete cold-plunge/ice-bath systems, Manufacturer and Brand owner also nee
 
 The [requested-product role validation](docs/benchmarks/cold-plunge-2026-10-27/product-role-results.md) records the Penguin review and Coldture positive control, with scope limits, source audits and observed costs.
 
+The first [no-seed discovery preview](docs/benchmarks/cold-plunge-discovery-2026-10-28/results.md) found no qualified suppliers from three checks. It documents first-query selection bias and a separate pre-master filtering defect; improving the bounded candidate pool is the next step. The preview adds evaluation tooling and leaves application behavior unchanged.
+
 Country quotes must contain an affirmative company location or a contextual company-office address. Shipping, return addresses, showrooms, warehouses, origin/manufacturing claims, customer locations and negated statements do not establish headquarters. The validator checks the quoted text in its local source context and retains other valid claims when one claim fails. A long, literal, already-supported location quote may be shortened to a contiguous span of at most twelve words, with its original retained for audit. This is conservative evidence validation, not independent verification of legal headquarters or geography.
 
 Excerpts reserve space for location, product configuration, company role and contacts. Long navigation menus or exclusion lists cannot take all the product-evidence slots. Configuration passages are kept as contiguous source windows so bundle contents remain readable together.

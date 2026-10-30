@@ -59,3 +59,37 @@ class BenchmarkFollowupTests(unittest.TestCase):
             self.assertIsNone(manifest['code_commit']); self.assertIsNone(manifest['production_changes_since_feasibility'])
             self.assertEqual(manifest['comparison']['status'],'unavailable')
             self.assertEqual(manifest['comparison']['baseline_ref'],'docs/distributor-feasibility')
+
+    def test_discovery_main_captures_raw_website_items_before_page_rejection(self):
+        import os, shutil, sys
+        from backend import master_index, research_runner, supplier_validator, web_fetcher
+        helper=load_helper('docs/benchmarks/cold-plunge-discovery-2026-10-28/run_discovery_check.py','discovery_main')
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ):
+            root=Path(tmp).resolve(); source=root/'docs/benchmarks/cold-plunge-discovery-2026-10-28'; source.mkdir(parents=True)
+            for name in ['run_discovery_check.py','brief.md']:
+                shutil.copyfile(ROOT/'docs/benchmarks/cold-plunge-discovery-2026-10-28'/name,source/name)
+            helper.ROOT=root; helper.__file__=str(source/'run_discovery_check.py')
+            os.environ['SUPPLIER_REFERENCE_DIR']=str(root/'references')
+            reference=master_index.import_reference('Supplier,Website\nKnown,https://known.example\n')
+            argv=['discovery','--round','offline','--master-reference-id',reference['id']]
+            candidates=[{'url':'https://candidate'+str(i)+'.example','title':'Candidate '+str(i)} for i in range(3)]
+            raw_html='<p>'+('Raw supplier content. '*9000)+'</p>'
+            def actor(actor_id,data,context,**kwargs):
+                context.reserve('apify',.5,run_id='mock-run',dataset_id='mock-dataset')
+                return [{'html':raw_html,'headers':{'Authorization':'secret'},'metadata':{'url':data['query']},
+                         'crawl':{'httpStatusCode':500 if 'candidate0' in data['query'] else 200}}]
+            with patch.object(sys,'argv',argv), patch.object(helper.subprocess,'check_output',return_value='mock-commit\n'), \
+                 patch.object(research_runner,'run_serp_discovery',return_value=candidates), \
+                 patch.object(web_fetcher,'run_actor',side_effect=actor), \
+                 patch.object(supplier_validator,'analyze_supplier_with_llm',return_value={'error':'offline-fixture'}) as model:
+                helper.main()
+            output=root/'var/eval/cold-plunge-discovery-2026-10-28/offline'
+            records=json.loads((output/'website_actor_records.json').read_text())
+            self.assertEqual(len(records),3)
+            self.assertEqual(records[0]['items'][0]['crawl']['httpStatusCode'],500)
+            self.assertEqual(records[0]['items'][0]['html'],raw_html)
+            self.assertNotIn('headers',records[0]['items'][0])
+            pages=json.loads((output/'captured_pages.json').read_text())
+            self.assertEqual(len(pages),2); self.assertTrue(model.called)
+            self.assertTrue(all(len(p['text'])<len(raw_html) for p in pages))
+            self.assertEqual(records[0]['actor_runs'][0]['run_id'],'mock-run')

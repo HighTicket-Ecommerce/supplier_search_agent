@@ -1,0 +1,11 @@
+# Manufacturer/brand-owner discovery check — 2026-10-28
+
+Test the current search workflow before changing discovery behavior. No websites are supplied. Use **Complete cold plunge systems**, Manufacturer/Brand owner only, United States and Canada, and the existing private master reference. A qualifying complete system needs a tub and included/integrated chiller, company-attributed creation/production of the primary category, and supported company location. Search-market localization is not company-location evidence.
+
+One preview may verify at most three candidate domains, with three page attempts each, nine total pages, fifteen external calls, 600 seconds, $6 conservative execution exposure and $0.50 per actor. Shopping, catalogue analysis, browser fallback and exports are disabled. Master-known discovered hosts must be recorded and skipped before paid website verification. Related hosts/name conflicts remain review candidates, never confirmed new companies.
+
+Capture the actual SERP inputs and raw returned pages, selected candidates, skipped records, website fetch attempts/pages, model analyses and isolated job result. Claim each round before provider calls; never automatically repeat an existing/uncertain round. Hash source code, settings and the master file before execution, and check the master remains unchanged afterwards. Keep private artifacts under ignored `var/eval/`.
+
+Review every surfaced domain for official-site/product relevance, known/master status and processing outcome. Measure candidate selection separately from website qualification. In particular, test whether master-known or previously seen domains consume the discovery window before the job's filter can reach other results. If a bug is demonstrated, first reproduce it offline, implement the smallest bounded fix, replay the same saved SERPs, then make a fresh bounded preview if needed.
+
+Report counts, sources, uncertain/failed checks and provider usage. Compare development/anchor hits only; identify naturally surfaced historical final-check sites separately and do not use them to tune qualification. This is an operational discovery sample, not an independent accuracy test or web-wide recall estimate. Preserve frozen historical labels. Directory-to-official-site discovery remains a separate pending test.
