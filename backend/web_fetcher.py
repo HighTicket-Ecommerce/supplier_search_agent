@@ -79,13 +79,18 @@ def _product_terms(product):
     return {t.rstrip("s") for t in re.findall(r"\w+", (product or "").casefold()) if len(t) > 3}
 
 
+def _positive_product_brief(product):
+    return re.split(r"\b(?:no|not|excluding|exclude|except|without)\b", product, maxsplit=1, flags=re.I)[0]
+
+
 def _page_priority(url, product, label=""):
     path = urlsplit(url).path.casefold()
     if re.search(r"\.(?:jpe?g|png|webp|gif|svg|ico|css|js|json|pdf|zip|mp4|woff2?)$", path) or re.search(r"/(?:cdn|assets)/", path):
         return None
     if re.search(r"privacy|terms|checkout|cart|login|account|shipping|refund|returns|blog|news", path):
         return None
-    terms = _product_terms(product) - {"complete", "system", "supplier", "product", "primary"}
+    positive_product = _positive_product_brief(product)
+    terms = _product_terms(positive_product) - {"complete", "system", "supplier", "product", "primary"}
     if re.search(r"about|company|our-story|who-we-are|our-team|mission", path) or re.search(
             r"^(?:about\b|our (?:story|company|team)\b|who we are\b)", label.casefold()):
         return (0, 0)
@@ -106,11 +111,13 @@ def _page_priority(url, product, label=""):
             # "All-in-one plunge filter" names an accessory, even with system keywords.
             # Inspect the item slug/label, not a parent collection or included extras.
             names = [re.sub(r"[-_]+", " ", unquote(name).casefold())
-                     for name in (product, path.rstrip("/").rsplit("/", 1)[-1], label)]
+                     for name in (positive_product, path.rstrip("/").rsplit("/", 1)[-1], label)]
             heads = [re.split(r"\b(?:with|including|includes?)\b", name, maxsplit=1)[0] for name in names]
             accessory_pattern = r"\b(?:accessor(?:y|ies)|filters?|covers?|(?:dry )?mats?|chemicals?|cleaners?|hoses?|steps?)\b"
+            def complete_pair_bundle(name):
+                return re.search(r"\b(?:tub|plunge|ice bath)\s+and\s+chiller\s+bundle\b", name)
             accessory = not re.search(accessory_pattern, heads[0]) and any(
-                re.search(accessory_pattern, name) for name in heads[1:])
+                re.search(accessory_pattern, name) and not complete_pair_bundle(name) for name in heads[1:])
             component = re.search(r"chiller|tubs?-only", path)
             complete = re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
             if accessory or (component and not complete):
