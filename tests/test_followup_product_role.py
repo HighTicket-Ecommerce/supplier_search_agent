@@ -35,3 +35,17 @@ class ProductRoleFollowupTests(unittest.TestCase):
                      'A leading manufacturer of cold plunges supplies our tubs.',
                      'Acme is a leading cold plunge manufacturer']:
             with self.subTest(text=text): self.assertEqual(self.check(text),'not_established')
+
+    def test_foreign_manufacturer_words_cannot_qualify_a_complete_supplier(self):
+        from test_product_roles import RequestedProductRoleTests
+        fixture=RequestedProductRoleTests(); fixture.setUp()
+        try:
+            for text in ['The manufacturer of our cold plunges is Acme.',
+                         'A leading manufacturer of cold plunges supplies our tubs.']:
+                with self.subTest(text=text):
+                    row=fixture.run_case(text,body='Example\n\n'+text)
+                    self.assertEqual(row['status'],'review')
+                    self.assertEqual(row['reason'],'supplier_role_not_established')
+            row=fixture.run_case('Example is a leading cold plunge manufacturer')
+            self.assertEqual(row['status'],'qualified')
+        finally: fixture.tearDown()
