@@ -24,7 +24,9 @@ def name_key(value):
 
 
 def core_name_key(value):
-    tokens = re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", value).casefold())
+    normalized = unicodedata.normalize("NFKD", value).casefold()
+    normalized = "".join(c for c in normalized if not unicodedata.combining(c))
+    tokens = re.findall(r"[^\W_]+", normalized, re.UNICODE)
     while tokens and tokens[-1] in LEGAL_SUFFIXES:
         tokens.pop()
     return "".join(tokens)

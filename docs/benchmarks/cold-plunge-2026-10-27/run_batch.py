@@ -1,5 +1,6 @@
 """Seed-only preview runner for the frozen cold-plunge labels. Isolated job DB."""
 import json
+import argparse
 import os
 import sys
 import time
@@ -9,16 +10,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(ROOT / ".env")
-os.environ["SUPPLIER_JOB_DB"] = str(ROOT / "var" / "eval" / "cold-plunge-2026-10-27" / "jobs.sqlite")
+sys.path.insert(0, str(ROOT))
 
 from backend.job_store import get_job, init_job
-from backend.master_index import list_references
+from backend.master_index import load_reference
 from backend.models import ResearchRequest
 from backend.research_runner import run_research_job
 
 LABELS = json.loads((Path(__file__).with_name("labels.json")).read_text())
-MASTER_ID = list_references()[0]["id"]
 
 
 def cases_by_id(ids):
@@ -26,8 +25,11 @@ def cases_by_id(ids):
     return [lookup[i] for i in ids]
 
 
-def run(ids):
+def run(ids, *, master_reference_id):
+    # Validate an explicitly selected immutable reference before any provider work.
+    load_reference(master_reference_id)
     selected = cases_by_id(ids)
+    os.environ["SUPPLIER_JOB_DB"] = str(ROOT / "var" / "eval" / "cold-plunge-2026-10-27" / "jobs.sqlite")
     request = ResearchRequest(
         product=LABELS["product"],
         candidate_urls=[c["url"] for c in selected],
@@ -48,7 +50,7 @@ def run(ids):
         max_external_calls=20,
         max_execution_cost_usd=10,
         research_mode="supplier_search",
-        master_reference_id=MASTER_ID,
+        master_reference_id=master_reference_id,
         allow_browser_fallback=False,
         use_shopify_catalogue=False,
     )
@@ -84,4 +86,9 @@ def run(ids):
 
 
 if __name__ == "__main__":
-    run(sys.argv[1:])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--master-reference-id", required=True, help="Exact saved master-reference ID")
+    parser.add_argument("case_ids", nargs="+")
+    args = parser.parse_args()
+    load_dotenv(ROOT / ".env")
+    run(args.case_ids, master_reference_id=args.master_reference_id)
