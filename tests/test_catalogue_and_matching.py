@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import socket
-import requests
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -179,7 +178,7 @@ class CatalogueAndMatchingTests(unittest.TestCase):
         def actor(*args,**kwargs):
             context.reserve("apify",.5,run_id="browser-fixture",dataset_id="dataset-fixture")
             return [{"html":html}]
-        with patch.object(directory_runner,"fetch_public",side_effect=requests.ConnectTimeout), \
+        with patch.object(directory_runner,"fetch_public",side_effect=public_fetch.PublicFetchError("timeout")), \
              patch.object(directory_runner,"run_actor",side_effect=actor) as run:
             rows,coverage=directory_runner.fetch_directory(fixture["source_url"],context,limit=200)
         self.assertEqual(len(rows),120)

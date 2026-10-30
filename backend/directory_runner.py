@@ -4,11 +4,10 @@ from html.parser import HTMLParser
 import json
 import re
 import time
-import requests
 from urllib.parse import urljoin, urlsplit, urldefrag
 
 from backend.master_index import name_key
-from backend.public_fetch import fetch_public
+from backend.public_fetch import fetch_public, PublicFetchError
 from backend.utils import domain_from_url
 from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
@@ -105,7 +104,7 @@ def fetch_directory(url, context, *, limit):
         try:
             source = fetch_public(url, context)
             rows = extract_html_brands(source["text"], source["url"])
-        except requests.RequestException:
+        except PublicFetchError:
             if not context.request.allow_browser_fallback:
                 raise
         browser_used = False

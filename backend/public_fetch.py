@@ -11,13 +11,31 @@ import certifi
 import urllib3
 
 
+class PublicFetchError(ValueError):
+    """A public request failed; callers may use a bounded browser fallback."""
+
+
+class URLPolicyError(ValueError):
+    """The URL is forbidden; another transport must not bypass this decision."""
+
+
 def check_public_url(url):
-    parsed = urlsplit(url)
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        raise URLPolicyError("Malformed public URL") from exc
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
-        raise ValueError("Expected a public HTTP(S) URL")
-    addresses = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        raise URLPolicyError("Expected a public HTTP(S) URL")
+    try:
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    except ValueError as exc:
+        raise URLPolicyError("Invalid URL port") from exc
+    try:
+        addresses = socket.getaddrinfo(parsed.hostname, port)
+    except OSError as exc:
+        raise PublicFetchError("Public address lookup failed") from exc
     if not addresses or any(not ipaddress.ip_address(a[4][0]).is_global for a in addresses):
-        raise ValueError("Directory requests require a public internet address")
+        raise URLPolicyError("Directory requests require a public internet address")
     return addresses[0][4][0]
 
 
@@ -57,18 +75,20 @@ def fetch_public(url, context, *, json_body=None, max_bytes=3_000_000):
                 preload_content=False)
             if response.status in {301, 302, 303, 307, 308}:
                 if json_body is not None or redirect == 3:
-                    raise ValueError("Unexpected directory redirect")
+                    raise PublicFetchError("Unexpected directory redirect")
+                if not response.headers.get("Location"):
+                    raise PublicFetchError("Directory redirect has no location")
                 url = urljoin(url, response.headers.get("Location", ""))
                 context.record(operation, status="redirect", location=url)
                 continue
             if response.status >= 400:
-                raise ValueError("Public request failed with HTTP " + str(response.status))
+                raise PublicFetchError("Public request failed with HTTP " + str(response.status))
             chunks, size = [], 0
             for chunk in response.stream(32768, decode_content=True):
                 context.checkpoint()
                 size += len(chunk)
                 if size > max_bytes:
-                    raise ValueError("Public response exceeds the size limit")
+                    raise PublicFetchError("Public response exceeds the size limit")
                 chunks.append(chunk)
             body = b"".join(chunks)
             charset = re.search(r"charset=([\w-]+)", response.headers.get("Content-Type", ""), re.I)
@@ -81,6 +101,9 @@ def fetch_public(url, context, *, json_body=None, max_bytes=3_000_000):
                           "retrieved_at": time.time(), "body_sha256": hashlib.sha256(body).hexdigest()}
             context.record(operation, status="completed", bytes=size, body_sha256=result["body_sha256"])
             return result
+        except (urllib3.exceptions.HTTPError, OSError) as exc:
+            context.record(operation, status="error", error_type=type(exc).__name__)
+            raise PublicFetchError("Public transport failed") from exc
         except Exception as exc:
             context.record(operation, status="error", error_type=type(exc).__name__)
             raise
