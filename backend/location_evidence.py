@@ -6,6 +6,7 @@ Those still require the supplier analysis and its official source.
 import re
 import unicodedata
 from urllib.parse import urlsplit
+from backend.location_text import SELF_LOCATION_RE
 
 
 def normalize_quote(value):
@@ -34,8 +35,7 @@ _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,
                           r"(?:[A-Z]{2}\b|[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+){0,2}\b)")
 _STREET = re.compile(r"\b\d{1,6}\s+[A-Za-z0-9 .'\-]{1,70}\b"
                     r"(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|boulevard|blvd|line|court|ct|place|pl)\b", re.I)
-_SELF_LOCATION = re.compile(r"\bwe(?:'re|\s+are)\s+(?:an?\s+)?[^.!?]{1,70},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+"
-                           r"(?:manufacturer|company|business)\b", re.I)
+_SELF_LOCATION = SELF_LOCATION_RE
 _OFFICE_CONTEXT = re.compile(r"\b(?:our office|office address|headquarters|hq|head office|contact (?:us|[A-Z][\w -]+)|"
                               r"company address|business address)\b", re.I)
 
