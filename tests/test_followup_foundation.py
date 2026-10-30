@@ -30,6 +30,23 @@ class FoundationFollowupTests(unittest.TestCase):
         job_store.init_job(job_id, request.model_dump())
         return ResearchContext(job_id, request)
 
+    def test_supplier_failures_are_scoped_and_survive_only_their_own_cache_hit(self):
+        context = self.context()
+        failure = {"url": "https://a.example/about", "error_type": "RuntimeError"}
+        def fetch(url, ctx):
+            if "a.example" in url:
+                ctx.fetch_failures.append(failure)
+            return [{"url": url, "text": "Supplier evidence"}]
+        with patch.object(supplier_validator, "fetch_website_pages", side_effect=fetch) as fetcher, \
+             patch.object(supplier_validator, "analyze_supplier_with_llm", return_value={"error": "offline"}):
+            a = supplier_validator.process_supplier("Sauna heaters", "https://a.example", context)
+            b = supplier_validator.process_supplier("Sauna heaters", "https://b.example", context)
+            a_again = supplier_validator.process_supplier("Sauna heaters", "https://a.example", context)
+        self.assertEqual(a.get("collection_failures"), [failure])
+        self.assertEqual(b.get("collection_failures", []), [])
+        self.assertEqual(a_again.get("collection_failures"), [failure])
+        self.assertEqual(fetcher.call_count, 2)
+
     def test_transport_and_http_failures_fall_back_without_policy_bypass(self):
         errors = [public_fetch.urllib3.exceptions.NewConnectionError(None, "refused"),
                   public_fetch.urllib3.exceptions.ReadTimeoutError(None, "/", "timeout"),

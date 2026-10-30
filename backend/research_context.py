@@ -22,6 +22,7 @@ class ResearchContext:
         self.operations = []
         self.catalogues = {}
         self.website_pages = {}
+        self.website_failures = {}
         self.fetch_failures = []
 
     def checkpoint(self):
