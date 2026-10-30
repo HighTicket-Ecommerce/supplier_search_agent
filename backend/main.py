@@ -86,9 +86,11 @@ def research_status(job_id: str):
         raise HTTPException(404, "Job not found")
     completed = job["processed"] + len(job.get("skipped", []))
     total = max(job.get("total", 0), completed)
+    if job["status"] == "completed":
+        completed = total
     return {"status": job["status"], "processed": job["processed"], "total": total,
             "completed_count": completed,
-            "progress_pct": round(completed / total * 100, 1) if total else 0,
+            "progress_pct": 100 if job["status"] == "completed" else round(completed / total * 100, 1) if total else 0,
             "accepted_count": len(job["accepted"]), "review_count": len(job["review"]),
             "rejected_count": len(job["rejected"]), "skipped_count": len(job.get("skipped", [])),
             "observation_count": len(job.get("observations", [])), "target_suppliers": job.get("target_suppliers", 0),
