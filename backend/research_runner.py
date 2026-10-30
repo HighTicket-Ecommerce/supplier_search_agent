@@ -1,199 +1,155 @@
-import traceback
+import logging
 
 from backend.job_store import update_job, get_job
-from backend.apify_runner import run_serp_discovery
+from backend.actor_client import ActorError
+from backend.apify_runner import run_serp_discovery, run_serp_brand_lookup
 from backend.google_shopping_runner import run_google_shopping_discovery
 from backend.supplier_validator import process_supplier
-from backend.filters import is_blocked_domain, is_country_blocked_by_tld
-from backend.sheets import append_supplier_row
-from backend.config import MAX_CANDIDATE_DOMAINS, DEFAULT_TARGET_SUPPLIERS
-from backend.utils import domain_from_url
+from backend.filters import is_blocked_domain
+from backend.research_context import ResearchContext, JobStopped, LimitReached
+from backend.utils import normalize_url, domain_from_url, is_search_destination
+from backend.master_index import MasterIndex, load_reference, reference_summary, match_without_reference
+from backend.directory_runner import fetch_directory
 
 
-def _validate_candidates(
-    candidates: list[dict],
-    target: int,
-    accepted: list[dict],
-    rejected: list[dict],
-    job_id: str,
-    req,
-    processed: int,
-) -> int:
-    """
-    Validate candidates one by one. Stops early when target accepted count is met.
-    Returns updated processed count.
-    """
-    for item in candidates:
-        if len(accepted) >= target:
-            break
+def run_research_job(job_id, req):
+    context = ResearchContext(job_id, req)
+    accepted, review, rejected = [], [], []
+    seen = set()
+    resolved = set()
+    identity_attempts = set()
+    retryable_identities = set()
+    processed = 0
+    observations, coverage, warnings = [], [], []
+    master = None
 
-        # Check if user stopped the job
-        job = get_job(job_id)
-        if job and job.get("status") == "stopped":
-            break
+    def save(**extra):
+        update_job(job_id, accepted=accepted, review=review, rejected=rejected, processed=processed,
+                   total=max(len(seen), len(observations)), target_suppliers=req.target_suppliers,
+                   observations=observations, directory_coverage=coverage, warnings=warnings,
+                   master_reference=reference_summary(master.reference) if master else None, **extra)
 
-        try:
-            supplier = process_supplier(
-                product=req.product,
-                url=item["url"],
-                brand_hint=item.get("brand_name"),
-                discovery_source=item.get("discovery_source"),
-                price_hint=item.get("price_hint"),
-                allowed_countries=req.allowed_countries,
-            )
+    def enough():
+        return len(accepted) >= req.target_suppliers or processed >= req.max_candidate_domains
 
-            if supplier.get("status") == "rejected":
-                rejected.append(supplier)
-            else:
-                accepted.append(supplier)
-                try:
-                    append_supplier_row(job_id, req.product, supplier)
-                except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).warning(
-                        f"[SHEETS] Failed to write {supplier.get('url')}: {e}"
-                    )
-
-        except Exception as e:
-            rejected.append({
-                "url": item["url"],
-                "reason": f"runtime_error:{type(e).__name__}",
-            })
-
-        processed += 1
-
-        update_job(
-            job_id,
-            processed=processed,
-            accepted=accepted,
-            rejected=rejected,
-        )
-
-    return processed
-
-
-def run_research_job(job_id: str, req):
-    """
-    Runs supplier research in the background.
-    Target-driven: stops when enough accepted suppliers are found.
-    NEVER raises — always updates job_store.
-    """
-    try:
-        target = req.target_suppliers or DEFAULT_TARGET_SUPPLIERS
-        max_domains = req.max_candidate_domains or MAX_CANDIDATE_DOMAINS
-
-        update_job(job_id, status="running", target_suppliers=target)
-
-        accepted: list[dict] = []
-        rejected: list[dict] = []
-        seen_domains: set[str] = set()
-        processed = 0
-
-        # =================================================
-        # PHASE 0 — GOOGLE SHOPPING → BRAND ANCHORS
-        # =================================================
-        shopping_brands = run_google_shopping_discovery(req.product)
-        shopping_candidates: list[dict] = []
-
-        for item in shopping_brands:
-            if len(shopping_candidates) + len(seen_domains) >= max_domains:
+    def process(candidates):
+        nonlocal processed
+        for item in candidates:
+            context.checkpoint()
+            if enough():
                 break
-
-            brand = item.get("brand")
-            price_hint = item.get("price_hint")
-            product_url = item.get("example_product_url")
-
-            if not brand or not product_url:
+            url = normalize_url(item["url"])
+            domain = domain_from_url(url)
+            hint = (item.get("brand_name") or "").strip().casefold()
+            identity_key = (domain, hint)
+            retry_identity = bool(hint and domain in retryable_identities and identity_key not in identity_attempts)
+            if not domain or (domain in seen and not retry_identity) or is_search_destination(url) or is_blocked_domain(domain):
                 continue
+            seen.add(domain)
+            identity_attempts.add(identity_key)
+            save()
+            try:
+                supplier = process_supplier(req.product, url, context,
+                                            brand_hint=item.get("brand_name"), discovery_source=item.get("discovery_source"),
+                                            price_hint=item.get("price_hint_raw"))
+                supplier["discovery"] = {k: v for k, v in item.items() if k != "url"}
+                supplier["master_match"] = master.match(supplier.get("supplier_name", ""), supplier.get("url", url)) if master else match_without_reference()
+                final_domain = domain_from_url(supplier.get("url", url))
+                if final_domain in resolved:
+                    supplier.update(status="review", reason="duplicate_resolved_website")
+                if supplier.get("reason") == "shopping_identity_not_established":
+                    retryable_identities.add(domain)
+                else:
+                    retryable_identities.discard(domain)
+                if final_domain and supplier["status"] == "qualified":
+                    resolved.add(final_domain)
+                if supplier["status"] == "qualified":
+                    accepted.append(supplier)
+                elif supplier["status"] == "excluded":
+                    rejected.append(supplier)
+                else:
+                    review.append(supplier)
+            except (JobStopped, LimitReached) as exc:
+                review.append({"url": url, "status": "retry_needed", "reason": "verification_interrupted:" + str(exc),
+                               "discovery": {k: v for k, v in item.items() if k != "url"}})
+                save()
+                raise
+            except Exception as exc:
+                review.append({"url": url, "status": "retry_needed", "reason": "processing_failed:" + type(exc).__name__})
+            processed += 1
+            save()
 
-            domain = domain_from_url(product_url)
-            if not domain or domain in seen_domains or is_blocked_domain(domain):
-                continue
-            if is_country_blocked_by_tld(domain, req.allowed_countries):
-                continue
-
-            seen_domains.add(domain)
-
-            shopping_candidates.append({
-                "url": f"https://{domain}",
-                "brand_name": brand,
-                "discovery_source": "google_shopping",
-                "price_hint": price_hint,
-            })
-
-        # Batch-limit: only validate target × 3 candidates (accounts for ~30% acceptance)
-        shopping_budget = min(len(shopping_candidates), target * 3)
-        shopping_candidates = shopping_candidates[:shopping_budget]
-
-        update_job(job_id, total=len(shopping_candidates))
-
-        # Validate shopping candidates (stop early if target met)
-        processed = _validate_candidates(
-            shopping_candidates, target, accepted, rejected,
-            job_id, req, processed,
-        )
-
-        # =================================================
-        # PHASE 1 — SERP FALLBACK (only if target not met)
-        # =================================================
-        job = get_job(job_id)
-        is_stopped = job and job.get("status") == "stopped"
-
-        if not is_stopped and len(accepted) < target and req.use_apify:
-            # Batch-limit: only validate enough to fill the gap (× 4 for lower SERP acceptance)
-            still_needed = target - len(accepted)
-            serp_budget = still_needed * 4
-
-            if serp_budget > 0:
-                serp_results = run_serp_discovery(req.product)
-                serp_candidates: list[dict] = []
-
-                for item in serp_results:
-                    if len(serp_candidates) >= serp_budget:
+    try:
+        context.checkpoint()
+        if req.master_reference_id:
+            master = MasterIndex(load_reference(req.master_reference_id))
+        save(status="running")
+        if req.research_mode == "list_compare":
+            for row in req.comparison_rows:
+                context.checkpoint()
+                observations.append(dict(row.model_dump(), status="observation", master_match=master.match(row.supplier_name, row.url)))
+                processed += 1
+            save(status="completed")
+            return
+        if req.research_mode == "distributor_brands":
+            for url in req.directory_urls:
+                remaining = req.max_directory_entries - len(observations)
+                if remaining <= 0:
+                    warnings.append("directory_entry_limit: some source URLs were not fetched")
+                    break
+                try:
+                    rows, source_coverage = fetch_directory(url, context, limit=remaining)
+                    for row in rows:
+                        row["master_match"] = master.match(row["supplier_name"], "") if master else match_without_reference()
+                    observations.extend(rows)
+                    coverage.append(source_coverage)
+                    save()
+                except (JobStopped, LimitReached):
+                    raise
+                except Exception as exc:
+                    warnings.append({"source_url": url, "error": "directory_request_failed:" + type(exc).__name__,
+                                     "diagnostic": str(exc) if isinstance(exc, (ActorError, ValueError)) else "Public directory request failed"})
+                    save()
+            if req.verify_directory_brands:
+                for row in observations:
+                    if enough():
                         break
-
-                    domain = item.get("domain")
-                    if not domain or domain in seen_domains:
-                        continue
-
-                    if is_blocked_domain(domain):
-                        continue
-                    if is_country_blocked_by_tld(domain, req.allowed_countries):
-                        continue
-
-                    seen_domains.add(domain)
-
-                    serp_candidates.append({
-                        "url": f"https://{domain}",
-                        "brand_name": None,
-                        "discovery_source": "serp",
-                        "price_hint": None,
-                    })
-
-                # Update total to include SERP candidates
-                update_job(job_id, total=processed + len(serp_candidates))
-
-                # Validate SERP candidates (stop early if target met)
-                processed = _validate_candidates(
-                    serp_candidates, target, accepted, rejected,
-                    job_id, req, processed,
-                )
-
-        job = get_job(job_id)
-        final_status = "stopped" if (job and job.get("status") == "stopped") else "completed"
-
-        update_job(
-            job_id,
-            status=final_status,
-            processed=processed,
-            accepted=accepted,
-            rejected=rejected,
-        )
-
-    except Exception as e:
-        update_job(
-            job_id,
-            status="failed",
-            error=str(e),
-            traceback=traceback.format_exc(),
-        )
+                    context.checkpoint()
+                    candidates = run_serp_brand_lookup(row["supplier_name"], req.product, context,
+                        country=(req.allowed_countries or ["United States"])[0], limit=min(3, req.max_candidate_domains-processed))
+                    for candidate in candidates:
+                        candidate.update(brand_name=row["supplier_name"], discovery_source="distributor_identity_lookup",
+                                         directory_observation_id=row["observation_id"], directory_source_url=row["source_url"])
+                    row["lookup_candidate_urls"] = [c["url"] for c in candidates]
+                    process(candidates)
+            save(status="completed" if observations else "failed", **({} if observations else {"error": "No directory observations could be extracted; see warnings"}))
+            return
+        process([{"url": url, "discovery_source": "seed"} for url in req.candidate_urls])
+        if req.use_apify and not enough():
+            for country in req.allowed_countries or ["United States"]:
+                if enough():
+                    break
+                process(run_serp_discovery(req.product, context, country=country, limit=req.max_candidate_domains-processed))
+        if req.use_apify and req.use_shopping and not enough():
+            for country in req.allowed_countries or ["United States"]:
+                if enough():
+                    break
+                country_observations = run_google_shopping_discovery(req.product, context, country=country, limit=min(20, req.max_candidate_domains-processed))
+                observations.extend(country_observations)
+                for item in country_observations:
+                    if enough():
+                        break
+                    candidates = run_serp_brand_lookup(item["lookup_hint"], req.product, context, country=country, limit=min(3,req.max_candidate_domains-processed))
+                    for candidate in candidates:
+                        candidate.update(brand_name=item["lookup_hint"], discovery_source="shopping_identity_lookup", shopping_observation=item)
+                    process(candidates)
+        save(status="completed")
+    except JobStopped:
+        save(status="stopped")
+    except LimitReached as exc:
+        save(status="limited", limit_reason=str(exc))
+    except ActorError as exc:
+        save(status="failed", error=str(exc))
+    except Exception as exc:
+        logging.getLogger(__name__).error("Research failed: %s", type(exc).__name__)
+        save(status="failed", error=type(exc).__name__ + ": research request failed; partial results are saved")

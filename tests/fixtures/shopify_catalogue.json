@@ -1,0 +1,277 @@
+{
+  "source": "Captured Trove Vault benchmark, 2026-10-13; minimal factual product records",
+  "items": [
+    {
+      "store": "coldture.com",
+      "productId": 10328014487798,
+      "vendor": "Coldture Wellness",
+      "title": "Complete Sauna Vent Kit",
+      "url": "https://coldture.com/products/complete-sauna-vent-kit",
+      "currency": "CAD",
+      "priceMin": 39.99,
+      "priceMax": 39.99,
+      "variants": [
+        {
+          "variantId": 51778598863094,
+          "title": "Default Title",
+          "available": true,
+          "price": 39.99
+        }
+      ],
+      "productType": null,
+      "description": "The Sauna Vent Kit is an essential accessory designed to help regulate airflow and ventilation in your sauna. This kit includes a wooden panel and metal plates with perforated holes that are installed in the sauna walls. This allows for easy adjustment of airflow by rotating the wooden panel to cover or uncover the holes, allowing for better control over the temperature and humidity inside the sauna. Typically installed in two locations within the sauna, the vent kit helps maintain optimal air circulation, ensuring a comfortable and safe sauna experience."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9431079256310,
+      "vendor": "Coldture Wellness",
+      "title": "Quick-Connect Set",
+      "url": "https://coldture.com/products/quick-connect-set-hoses-and-ball-valves",
+      "currency": "CAD",
+      "priceMin": 349,
+      "priceMax": 349,
+      "variants": [
+        {
+          "variantId": 51017442230518,
+          "title": "Default Title",
+          "available": true,
+          "price": 349
+        }
+      ],
+      "productType": "Accessories",
+      "description": "Upgrade your cold plunge setup with the Quick Connect Set , designed for fast, secure, and hassle free installation. This complete set includes hoses, ball valves, and a pre filter , giving you everything needed to connect your plunge to your chiller while maintaining strong water flow and helping protect your system from debris. The quick connect design makes setup, maintenance, and disconnection simple, while the ball valves allow you to shut off water flow when servicing or cleaning your system. Includes: Hoses Ball valves Pre filter Quick connect fittings Ideal for replacing an existing connection set or completing a new Coldture cold plunge setup."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9304102240502,
+      "vendor": "Coldture Wellness",
+      "title": "xtreme | plunge",
+      "url": "https://coldture.com/products/new-xtreme-plunge",
+      "currency": "CAD",
+      "priceMin": 12999,
+      "priceMax": 12999,
+      "variants": [
+        {
+          "variantId": 51582781194486,
+          "title": "White",
+          "available": true,
+          "price": 12999
+        },
+        {
+          "variantId": 51582781260022,
+          "title": "Black",
+          "available": true,
+          "price": 12999
+        }
+      ],
+      "productType": "Cold Plunge",
+      "description": "the xtreme outdoor cold plunge is built for serious cold therapy outdoors year round. a powerful integrated chiller and rugged construction deliver consistent, ice-free cold exposure at home, without seasonal setup or hassle, designed for permanent installation in demanding real climates. Outer Dims: 80\" x 40\" x 30\" Inner Dims: 47\" x 27\" x 27\""
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9410753790198,
+      "vendor": "Coldture Wellness",
+      "title": "PRO LITE | red light panel",
+      "url": "https://coldture.com/products/pro-lite-red-light-panel",
+      "currency": "CAD",
+      "priceMin": 1499,
+      "priceMax": 1499,
+      "variants": [
+        {
+          "variantId": 50764335874294,
+          "title": "Default Title",
+          "available": true,
+          "price": 1499
+        }
+      ],
+      "productType": null,
+      "description": "Half body Red Light Therapy Panel"
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9404547629302,
+      "vendor": "Coldture Wellness",
+      "title": "PEMF | infrared mat",
+      "url": "https://coldture.com/products/pemf-mat",
+      "currency": "CAD",
+      "priceMin": 1299,
+      "priceMax": 1299,
+      "variants": [
+        {
+          "variantId": 50742049833206,
+          "title": "Default Title",
+          "available": true,
+          "price": 1299
+        }
+      ],
+      "productType": "Accessories",
+      "description": "Full-body pulsed electromagnetic field therapy in one mat. 74x31\" 18 Coils"
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9271878910198,
+      "vendor": "Coldture Wellness",
+      "title": "pro outdoor sauna assembly in canada - (electrical excluded)",
+      "url": "https://coldture.com/products/outdoor-sauna-pro-installation-assembly-can",
+      "currency": "CAD",
+      "priceMin": 1899.99,
+      "priceMax": 1899.99,
+      "variants": [
+        {
+          "variantId": 49916899328246,
+          "title": "Default Title",
+          "available": true,
+          "price": 1899.99
+        }
+      ],
+      "productType": null,
+      "description": "Pro Outdoor Sauna Assembly, available in major metropolitan areas across Canada. Remote locations are not currently serviced reach out for more details. Electrical setup not included."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9423367864566,
+      "vendor": "Coldture Wellness",
+      "title": "POD LITE | infrared sauna",
+      "url": "https://coldture.com/products/pod-lite-infrared-sauna",
+      "currency": "CAD",
+      "priceMin": 3999,
+      "priceMax": 3999,
+      "variants": [
+        {
+          "variantId": 51028992229622,
+          "title": "Natural Wood",
+          "available": true,
+          "price": 3999
+        },
+        {
+          "variantId": 51028992262390,
+          "title": "Black",
+          "available": true,
+          "price": 3999
+        }
+      ],
+      "productType": null,
+      "description": null
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9404592554230,
+      "vendor": "Coldture Wellness",
+      "title": "XTREME | woodburning sauna",
+      "url": "https://coldture.com/products/xtreme-outdoor-wood-burning-sauna",
+      "currency": "CAD",
+      "priceMin": 21999,
+      "priceMax": 21999,
+      "variants": [
+        {
+          "variantId": 50742100590838,
+          "title": "Default Title",
+          "available": true,
+          "price": 21999
+        }
+      ],
+      "productType": null,
+      "description": "Authentic Finnish wood-fired heat, no electrical required. Narvi NC16 stove, cedar interior, chimney included. Built for Canadian winters. 4-6 person."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9271876419830,
+      "vendor": "Coldture Wellness",
+      "title": "indoor sauna assembly in canada (electrical excluded)",
+      "url": "https://coldture.com/products/indoor-sauna-installation-assembly-can",
+      "currency": "CAD",
+      "priceMin": 999.99,
+      "priceMax": 999.99,
+      "variants": [
+        {
+          "variantId": 49916864004342,
+          "title": "Default Title",
+          "available": true,
+          "price": 999.99
+        }
+      ],
+      "productType": null,
+      "description": "Indoor Sauna Assembly within Canada available in major metropolitan areas across Canada. Remote locations are not currently serviced reach out for more details. Electrical setup not included."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 9211401011446,
+      "vendor": "Coldture Wellness",
+      "title": "VIP | Barrel + Chiller Pro",
+      "url": "https://coldture.com/products/the-barrel-chiller-pro-bundle-regular",
+      "currency": "CAD",
+      "priceMin": 4499,
+      "priceMax": 4499,
+      "variants": [
+        {
+          "variantId": 49271369105654,
+          "title": "Default Title",
+          "available": true,
+          "price": 4499
+        }
+      ],
+      "productType": null,
+      "description": "ships october 12 everything you need for daily cold plunging. one box. zero extras to buy. barrel tub + chiller pro + premium care kit."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 8471421157622,
+      "vendor": "Coldture Wellness",
+      "title": "BARREL LITE | bundle",
+      "url": "https://coldture.com/products/ultra-barrel-light-cold-plunge",
+      "currency": "CAD",
+      "priceMin": 3799,
+      "priceMax": 3799,
+      "variants": [
+        {
+          "variantId": 46395655979254,
+          "title": "Default Title",
+          "available": true,
+          "price": 3799
+        }
+      ],
+      "productType": "Cold Plunge",
+      "description": "ships october 12"
+    },
+    {
+      "store": "coldture.com",
+      "productId": 8983229989110,
+      "vendor": "Coldture Wellness",
+      "title": "BARREL LITE |  tub",
+      "url": "https://coldture.com/products/the-ultra-barrel-light-tub",
+      "currency": "CAD",
+      "priceMin": 499,
+      "priceMax": 499,
+      "variants": [
+        {
+          "variantId": 47844380541174,
+          "title": "Default Title",
+          "available": true,
+          "price": 499
+        }
+      ],
+      "productType": null,
+      "description": "the ultra barrel lite cold plunge tub delivers consistent cold water therapy in a compact, easy-to-use design. insulated 3-inch walls hold cold temperatures for hours, while the full-length shape supports comfortable, full-body immersion at home or on the go. compatible with ice or the coldture water chiller for clean, reliable daily plunging."
+    },
+    {
+      "store": "coldture.com",
+      "productId": 8793807159542,
+      "vendor": "Coldture Wellness",
+      "title": "PRO | Water Chiller",
+      "url": "https://coldture.com/products/cold-plunge-ice-bath-water-chiller-pro",
+      "currency": "CAD",
+      "priceMin": 3499,
+      "priceMax": 3499,
+      "variants": [
+        {
+          "variantId": 47093019640054,
+          "title": "Default Title",
+          "available": true,
+          "price": 3499
+        }
+      ],
+      "productType": null,
+      "description": "ships october 12 you wouldn\u2019t drink unfiltered water. your cold plunge shouldn\u2019t either. water chiller pro is coldture\u2019s most advanced chiller, built in-house for precise temperature control, continuous filtration, and clean, ready water every day."
+    }
+  ]
+}

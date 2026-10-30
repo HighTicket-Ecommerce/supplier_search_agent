@@ -1,9 +1,11 @@
 import os
+import csv
 import time
 import requests
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+from backend.master_index import parse_supplier_csv
 
 load_dotenv()
 
@@ -161,277 +163,216 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-ACCEPTED_COLS = {
-    "supplier_name": "Supplier Name",
-    "url": "Website",
-    "product": "Product Type",
-    "country": "Country",
-    "estimated_price_min": "Est. Price Min",
-    "supplier_type": "Supplier Type",
-    "confidence": "Confidence",
-    "email": "Email",
-    "phone": "Phone",
-    "estimated_margin_pct": "Est. Margin % (AI)",
-    "notes": "Notes",
-}
-
-REJECTED_COLS = {
-    "supplier_name": "Supplier Name",
-    "url": "Website",
-    "product": "Product Type",
-    "country": "Country",
-    "confidence": "Confidence",
-    "reason": "Rejection Reason",
-    "notes": "Notes",
-}
+TERMINAL_STATES = {"completed", "stopped", "failed", "limited", "interrupted"}
 
 
-def _render_results(accepted, rejected):
-    tab_accepted, tab_rejected = st.tabs(["Accepted Suppliers", "Rejected Suppliers"])
+def api(method, path, **kwargs):
+    try:
+        response = requests.request(method, BASE_URL + path, timeout=20, **kwargs)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        st.error("Backend request failed: " + type(exc).__name__)
+        st.stop()
 
-    with tab_accepted:
-        if accepted:
-            df_a = pd.DataFrame(accepted)
-            for col in ACCEPTED_COLS:
-                if col not in df_a.columns:
-                    df_a[col] = None
-            df_a = df_a[[c for c in ACCEPTED_COLS if c in df_a.columns]]
-            df_a = df_a.rename(columns=ACCEPTED_COLS)
-            df_a = df_a.fillna("\u2014")
-            df_a = df_a.replace("None", "\u2014")
-            df_a["Website"] = df_a["Website"].apply(
-                lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x and x != "\u2014" else "\u2014"
-            )
-            st.markdown(
-                '<div class="supplier-table">' + df_a.to_html(escape=False, index=False) + '</div>',
-                unsafe_allow_html=True,
-            )
-            df_csv = pd.DataFrame(accepted)
-            for col in ACCEPTED_COLS:
-                if col not in df_csv.columns:
-                    df_csv[col] = None
-            df_csv = df_csv[[c for c in ACCEPTED_COLS if c in df_csv.columns]]
-            df_csv = df_csv.rename(columns=ACCEPTED_COLS)
-            st.download_button("Download Accepted CSV", df_csv.to_csv(index=False), file_name="accepted_suppliers.csv", mime="text/csv")
-        else:
-            st.info("No accepted suppliers found.")
 
-    with tab_rejected:
-        if rejected:
-            df_r = pd.DataFrame(rejected)
-            for col in REJECTED_COLS:
-                if col not in df_r.columns:
-                    df_r[col] = None
-            df_r = df_r[[c for c in REJECTED_COLS if c in df_r.columns]]
-            df_r = df_r.rename(columns=REJECTED_COLS)
-            df_r = df_r.fillna("\u2014")
-            df_r = df_r.replace("None", "\u2014")
-            df_r["Website"] = df_r["Website"].apply(
-                lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x and x != "\u2014" else "\u2014"
-            )
-            st.markdown(
-                '<div class="supplier-table">' + df_r.to_html(escape=False, index=False) + '</div>',
-                unsafe_allow_html=True,
-            )
-            st.download_button("Download Rejected CSV", df_r.to_csv(index=False), file_name="rejected_suppliers.csv", mime="text/csv")
-        else:
-            st.info("No rejected suppliers.")
+def render_results(result):
+    tabs = st.tabs(["Qualified candidates", "Needs review", "Excluded", "List / directory observations", "Catalogue products"])
+    for tab, key in zip(tabs, ["accepted", "review", "rejected", "observations"]):
+        with tab:
+            rows = result.get(key, [])
+            if not rows:
+                st.info("No results in this group.")
+                continue
+            flattened = []
+            for row in rows:
+                display = {k: v for k, v in row.items() if k not in {"sources", "discovery", "evidence", "catalogue", "master_match"}}
+                display["master_match_status"] = row.get("master_match", {}).get("status", "not_checked")
+                display["matched_master_rows"] = ", ".join(str(m["source_row"]) for m in row.get("master_match", {}).get("matches", []))
+                display["evidence_urls"] = ", ".join(dict.fromkeys(e["source_url"] for e in row.get("evidence", [])))
+                flattened.append(display)
+            frame = pd.DataFrame(flattened)
+            st.dataframe(frame, width="stretch", hide_index=True)
+            st.download_button("Download " + key + " CSV", frame.to_csv(index=False), file_name=key+"_suppliers.csv", mime="text/csv", key="download_"+key)
+    with tabs[4]:
+        catalogues = result.get("catalogues", {})
+        if not catalogues:
+            st.info("No Shopify catalogue samples in this run.")
+        for url, catalogue in catalogues.items():
+            st.write(url)
+            st.write(catalogue["coverage"])
+            st.write(catalogue.get("observed_price_ranges", []))
+            products = [{k: v for k, v in p.items() if k != "description"} for p in catalogue["products"]]
+            frame = pd.DataFrame(products)
+            st.dataframe(frame, width="stretch", hide_index=True)
+            st.download_button("Download product sample CSV", frame.to_csv(index=False), file_name="catalogue_products.csv",
+                               mime="text/csv", key="catalogue_"+url)
+    if result.get("master_reference"):
+        st.caption("Compared with: " + result["master_reference"]["filename"] + ". Unmatched rows are not confirmed new suppliers.")
+    if result.get("directory_coverage"):
+        with st.expander("Directory coverage"):
+            st.json(result["directory_coverage"])
+    with st.expander("Full evidence and comparison details"):
+        st.json({k: result.get(k, []) for k in ["accepted", "review", "rejected", "observations"]})
+    qualified = result.get("accepted", [])
+    if qualified and not result.get("preview_only", True):
+        by_url = {row["url"]: row for row in qualified if row["url"] not in result.get("exports", {})}
+        selected = st.multiselect("Select reviewed candidates to export", list(by_url),
+                                 format_func=lambda u: by_url[u].get("supplier_name", u) + " — " + u)
+        if st.button("Export selected to Google Sheets", disabled=not selected):
+            exported = api("POST", "/research/export/"+result["job_id"], json={"selected_urls": selected})
+            result["exports"] = exported["exports"]
+            st.write(exported["exports"])
+    elif result.get("preview_only", True):
+        st.caption("Preview only. Google Sheets export is disabled for this job.")
 
 
 st.title("Supplier Research Agent")
-st.caption("Google Shopping \u2192 Google Search \u2192 Validation LLM \u2192 Table")
-
-# ----------------------------
-# SESSION STATE
-# ----------------------------
-if "job_id" not in st.session_state:
-    st.session_state.job_id = None
-if "is_running" not in st.session_state:
-    st.session_state.is_running = False
-
+st.caption("Find candidates, verify the requested product, review the evidence, then export.")
+st.session_state.setdefault("job_id", None)
+st.session_state.setdefault("is_running", False)
 is_running = st.session_state.is_running
 
-# ----------------------------
-# INPUTS (disabled while running)
-# ----------------------------
-col_input1, col_input2 = st.columns([2, 1])
-
-with col_input1:
-    product = st.text_input("Product", placeholder="e.g., Cold Plunge, Outdoor Sauna", disabled=is_running)
-
-with col_input2:
-    target_suppliers = st.slider("Suppliers to find", 1, 40, 20, step=1, disabled=is_running)
-
-selected_countries = st.multiselect(
-    "Supplier countries",
-    COUNTRY_OPTIONS,
-    default=COUNTRY_OPTIONS,
-    disabled=is_running,
-)
-
-# ----------------------------
-# BUTTONS
-# ----------------------------
-if is_running:
-    _, col_btn, col_stop, _ = st.columns([3, 1, 1, 3])
-    with col_btn:
-        st.markdown('<div class="run-btn">', unsafe_allow_html=True)
-        run = st.button("Run Research", type="primary", use_container_width=True, disabled=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    with col_stop:
-        st.markdown('<div class="stop-btn">', unsafe_allow_html=True)
-        stop = st.button("Stop Research", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-else:
-    _, col_btn, _ = st.columns([3, 1, 3])
-    with col_btn:
-        st.markdown('<div class="run-btn">', unsafe_allow_html=True)
-        run = st.button("Run Research", type="primary", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    stop = False
-
-# ----------------------------
-# STOP HANDLER
-# ----------------------------
-if stop and st.session_state.job_id:
-    try:
-        requests.post(f"{BASE_URL}/research/stop/{st.session_state.job_id}")
-    except Exception:
-        pass
-
-# ----------------------------
-# START JOB
-# ----------------------------
-if run and not is_running:
-    if not product.strip():
-        st.error("Please enter a product.")
-        st.stop()
-
-    payload = {
-        "product": product.strip(),
-        "use_apify": True,
-        "max_candidate_domains": 200,
-        "target_suppliers": int(target_suppliers),
-        "allowed_countries": selected_countries,
-    }
-
-    with st.spinner("Starting research job..."):
-        resp = requests.post(f"{BASE_URL}/research/start", json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-
-    st.session_state.job_id = data["job_id"]
-    st.session_state.is_running = True
-    st.rerun()
-
-# ----------------------------
-# POLLING
-# ----------------------------
-job_id = st.session_state.job_id
-
-if job_id and is_running:
-    # Animated searching indicator
-    anim_placeholder = st.empty()
-    anim_placeholder.markdown("""
-    <div class="searching-indicator">
-        <div class="searching-dot"></div>
-        <div class="searching-dot"></div>
-        <div class="searching-dot"></div>
-        <span class="searching-text">Analyzing supplier websites...</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    progress_bar = st.progress(0)
-    metrics_placeholder = st.empty()
-
-    while True:
-        resp = requests.get(f"{BASE_URL}/research/status/{job_id}")
-        resp.raise_for_status()
-        status = resp.json()
-
-        state = status.get("status")
-        processed = status.get("processed", 0)
-        total = status.get("total", 1)
-
-        accepted_count = status.get("accepted_count", 0)
-        rejected_count = status.get("rejected_count", 0)
-        target = status.get("target_suppliers", target_suppliers)
-
-        supplier_pct = min(int((accepted_count / target) * 100), 100) if target else 0
-
-        progress_bar.progress(supplier_pct)
-
-        m1, m2, m3 = metrics_placeholder.columns(3)
-        m1.metric("Suppliers Found", f"{accepted_count} / {target}")
-        m2.metric("Candidates Processed", f"{processed} / {total}")
-        m3.metric("Rejected", rejected_count)
-
-        if state in ("completed", "stopped", "failed"):
-            break
-
-        # Target reached — stop polling immediately
-        if accepted_count >= target:
-            break
-
-        time.sleep(4)
-
-    # Clear animation
-    anim_placeholder.empty()
-    st.session_state.is_running = False
-
-    if state == "failed":
-        st.session_state.last_error = status.get("error", "Unknown error")
-    else:
-        # Fetch final results and store in session
-        resp = requests.get(f"{BASE_URL}/research/result/{job_id}")
-        resp.raise_for_status()
-        result = resp.json()
+with st.expander("Load saved research"):
+    saved_id = st.text_input("Saved job ID", disabled=is_running)
+    if st.button("Load saved results", disabled=is_running or not saved_id.strip()):
+        result = api("GET", "/research/result/"+saved_id.strip())
+        st.session_state.job_id = saved_id.strip()
         st.session_state.last_result = result
-        st.session_state.last_state = state
+        st.session_state.is_running = result["status"] not in TERMINAL_STATES
+        st.rerun()
 
-    # Rerun to reset buttons (Run Research centered, no Stop button)
+workflow_labels = {"supplier_search": "Research suppliers", "distributor_brands": "Extract distributor brands",
+                   "list_compare": "Compare supplier lists"}
+workflow = st.selectbox("Workflow", list(workflow_labels), format_func=workflow_labels.get, disabled=is_running)
+st.session_state.setdefault("master_references", [])
+with st.expander("Master supplier list"):
+    master_file = st.file_uploader("Import master CSV", type=["csv"], disabled=is_running)
+    if st.button("Import master list", disabled=is_running or master_file is None):
+        try:
+            content = master_file.getvalue().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            st.error("Save the master CSV with UTF-8 encoding.")
+            st.stop()
+        imported = api("POST", "/references/master", json={"filename": master_file.name, "csv_content": content})
+        st.session_state.master_references = [imported] + [r for r in st.session_state.master_references if r["id"] != imported["id"]]
+        st.success(str(imported["record_count"]) + " supplier records imported. The original CSV is unchanged.")
+    if st.button("Load saved master lists", disabled=is_running):
+        st.session_state.master_references = api("GET", "/references/master")["references"]
+    master_by_id = {r["id"]: r for r in st.session_state.master_references}
+    master_id = st.selectbox("Compare against", [None] + list(master_by_id), disabled=is_running,
+        format_func=lambda value: "No master comparison" if value is None else master_by_id[value]["filename"] + " (" + str(master_by_id[value]["record_count"]) + " rows)")
+
+product = (st.text_input("Product", placeholder="e.g., Complete cold plunge systems, sauna heaters", disabled=is_running)
+           if workflow != "list_compare" else "Supplier list comparison")
+selected_countries = st.multiselect("Supplier headquarters", COUNTRY_OPTIONS, default=["United States", "Canada"], disabled=is_running)
+selected_roles = st.multiselect("Company roles", ["Manufacturer", "Brand owner", "Distributor", "Retailer"],
+                                default=["Manufacturer", "Brand owner", "Distributor"], disabled=is_running)
+seed_text, directory_text, comparison_rows, verify_brands = "", "", [], False
+use_discovery = False
+if workflow == "supplier_search":
+    seed_text = st.text_area("Supplier websites to research first", placeholder="One website per line", disabled=is_running)
+    use_discovery = st.checkbox("Discover additional suppliers", value=True, disabled=is_running)
+elif workflow == "distributor_brands":
+    directory_text = st.text_area("Distributor brand directories", placeholder="One directory URL per line", disabled=is_running)
+    verify_brands = st.checkbox("Find official sites and verify listed brands", value=False, disabled=is_running)
+    st.caption("Extraction compares the distributor's labels with your master list. Official-site verification uses additional search and page calls.")
+else:
+    comparison_file = st.file_uploader("Supplier list to compare (CSV)", type=["csv"], disabled=is_running)
+    comparison_text = st.text_area("Or supplier names, one per line", disabled=is_running)
+    if comparison_file is not None:
+        try:
+            comparison_rows = [{"supplier_name": r["supplier_name"], "url": r["url"]}
+                               for r in parse_supplier_csv(comparison_file.getvalue().decode("utf-8-sig"))]
+        except (ValueError, UnicodeDecodeError, csv.Error) as exc:
+            st.error(str(exc))
+            st.stop()
+    comparison_rows.extend({"supplier_name": name.strip(), "url": ""} for name in comparison_text.splitlines() if name.strip())
+    st.caption("This comparison makes no actor or model calls. Name matches and unmatched names need identity review.")
+preview_only = st.checkbox("Preview only — disable Google Sheets export", value=True, disabled=is_running)
+
+with st.expander("Research controls"):
+    target = st.number_input("Qualified candidates to find", min_value=1, max_value=100, value=5, disabled=is_running)
+    max_candidates = st.number_input("Maximum candidates", min_value=1, max_value=200, value=20, disabled=is_running)
+    max_pages = st.number_input("Maximum website pages across the run", min_value=1, max_value=200, value=30, disabled=is_running)
+    per_supplier = st.number_input("Maximum pages per supplier", min_value=1, max_value=8, value=3, disabled=is_running)
+    max_seconds = st.number_input("Maximum run time (seconds)", min_value=10, max_value=1800, value=300, disabled=is_running)
+    max_calls = st.number_input("Maximum service calls", min_value=1, max_value=300, value=50, disabled=is_running)
+    budget = st.number_input("Execution budget (USD)", min_value=0.5, max_value=100.0, value=5.0, step=0.5, disabled=is_running,
+                             help="Conservatively reserves each actor's maximum charge. Unused actor reservations stay held until the run ends; account/storage fees are separate.")
+    excluded = st.text_input("Excluded products (comma separated)", placeholder="e.g., replacement filters, assembly services", disabled=is_running)
+    use_shopping = st.checkbox("Add Shopping discovery", value=False, disabled=is_running)
+    browser_fallback = st.checkbox("Try a browser when page evidence is empty or thin", value=False, disabled=is_running)
+    shopify_catalogue = st.checkbox("Check Shopify product catalogue", value=False, disabled=is_running)
+    shopify_text = st.text_area("Known Shopify websites (optional)", placeholder="One website per line; otherwise detected from page evidence", disabled=is_running)
+    catalogue_limit = st.number_input("Maximum catalogue products per supplier", min_value=1, max_value=50, value=20, disabled=is_running)
+    directory_limit = st.number_input("Maximum directory entries across the run", min_value=1, max_value=1000, value=200, disabled=is_running)
+
+run = st.button("Run research", type="primary", disabled=is_running)
+if is_running and st.button("Stop research"):
+    api("POST", "/research/stop/"+st.session_state.job_id)
+
+if run:
+    if len(product.strip()) < 2:
+        st.error("Enter a product.")
+        st.stop()
+    if not selected_roles:
+        st.error("Select at least one company role.")
+        st.stop()
+    seeds = [line.strip() for line in seed_text.splitlines() if line.strip()]
+    if workflow == "supplier_search" and not seeds and not use_discovery:
+        st.error("Provide supplier websites or enable discovery.")
+        st.stop()
+    if workflow == "list_compare" and (not master_id or not comparison_rows):
+        st.error("Select a master list and provide suppliers to compare.")
+        st.stop()
+    if workflow == "distributor_brands" and not directory_text.strip():
+        st.error("Provide a distributor brand-directory URL.")
+        st.stop()
+    payload = {"product": product.strip(), "candidate_urls": seeds, "use_apify": use_discovery,
+               "use_shopping": use_shopping, "preview_only": preview_only,
+               "target_suppliers": int(target), "max_candidate_domains": int(max_candidates),
+               "allowed_countries": selected_countries, "allowed_supplier_types": selected_roles,
+               "excluded_products": [p.strip() for p in excluded.split(",") if p.strip()],
+               "max_pages": int(max_pages), "max_pages_per_supplier": int(per_supplier),
+               "max_runtime_seconds": int(max_seconds), "max_external_calls": int(max_calls), "max_execution_cost_usd": budget,
+               "research_mode": workflow, "master_reference_id": master_id, "comparison_rows": comparison_rows,
+               "directory_urls": [u.strip() for u in directory_text.splitlines() if u.strip()], "verify_directory_brands": verify_brands,
+               "max_directory_entries": int(directory_limit), "use_shopify_catalogue": shopify_catalogue,
+               "shopify_catalogue_urls": [u.strip() for u in shopify_text.splitlines() if u.strip()],
+               "max_catalogue_products": int(catalogue_limit), "allow_browser_fallback": browser_fallback}
+    started = api("POST", "/research/start", json=payload)
+    st.session_state.job_id = started["job_id"]
+    st.session_state.is_running = True
+    st.session_state.pop("last_result", None)
     st.rerun()
 
-elif job_id and not is_running:
-    # Check for error from just-finished run
-    if st.session_state.get("last_error"):
-        st.error(f"Research failed: {st.session_state.last_error}")
-        st.session_state.last_error = None
+job_id = st.session_state.job_id
+if job_id:
+    st.caption("Saved job ID: " + job_id)
+    if st.session_state.is_running:
+        progress = st.empty()
+        while True:
+            status = api("GET", "/research/status/"+job_id)
+            progress.write({"status": status["status"], "qualified": status["accepted_count"],
+                            "needs_review": status["review_count"], "processed": status["processed"],
+                            "limits": status["limits"]})
+            if status["status"] in TERMINAL_STATES:
+                break
+            time.sleep(2)
+        st.session_state.is_running = False
+        st.session_state.last_result = api("GET", "/research/result/"+job_id)
+        st.rerun()
+    result = st.session_state.get("last_result") or api("GET", "/research/result/"+job_id)
+    if result["status"] == "limited":
+        st.warning("Stopped at a configured limit: " + result.get("limit_reason", "unknown"))
+    elif result["status"] in {"failed", "interrupted"}:
+        st.warning(result.get("error") or "Research interrupted; partial results are saved.")
+    elif result["status"] == "stopped":
+        st.info("Research stopped. Partial results are saved.")
     else:
-        # Use cached result from session or fetch from backend
-        result = st.session_state.get("last_result")
-        if not result:
-            resp = requests.get(f"{BASE_URL}/research/result/{job_id}")
-            if resp.ok:
-                result = resp.json()
-
-        if result:
-            accepted = result.get("accepted", [])
-            rejected = result.get("rejected", [])
-            a_count = result.get("accepted_count", len(accepted))
-            r_count = result.get("rejected_count", len(rejected))
-
-            last_state = st.session_state.get("last_state", "completed")
-
-            if a_count or r_count:
-                if last_state == "stopped":
-                    st.warning(f"Research stopped early \u2014 found **{a_count}** suppliers ({r_count} rejected)")
-                else:
-                    st.success(f"Research complete \u2014 found **{a_count}** suppliers ({r_count} rejected)")
-                _render_results(accepted, rejected)
-            else:
-                st.info("No suppliers found. Try a different product or broader country selection.")
-
-else:
-    st.markdown(
-        '<p style="text-align:center; color:#94a3b8; padding:2rem 0;">Enter a product and click <b>Run Research</b> to get started.</p>',
-        unsafe_allow_html=True,
-    )
-
-# ----------------------------
-# DISCLAIMER
-# ----------------------------
-st.markdown(
-    '<p class="disclaimer">Supplier Research Agent can make mistakes. Always verify supplier information independently.</p>',
-    unsafe_allow_html=True,
-)
+        st.success("Research complete.")
+    st.write(result.get("limits", {}))
+    for warning in result.get("warnings", []):
+        st.warning(str(warning))
+    render_results(result)
