@@ -22,3 +22,13 @@ class CountryFollowupTests(unittest.TestCase):
                      'Headquarters\n\nKent, WA 98032\n\nWe also sell to Canada.',
                      'Headquarters: 1234 Example Ave, Ontario, California 91761']:
             with self.subTest(text=text): self.assert_country(text,'United States','headquarters')
+
+    def test_unresolved_headquarters_cards_block_lower_priority_offices(self):
+        for card in ['HEADQUARTERS\n\nSINGAPORE', 'Company HQ\n\nSINGAPORE', 'World HQ\n\nSINGAPORE',
+                     'HQ\n\nHo Chi Minh City', 'HQ\n\nSão Paulo', 'HQ\nSingapore', 'HQ | Singapore',
+                     '<h4>HQ</h4><span>Singapore</span>']:
+            text=card+('<p>Office: Kent, WA 98032</p>' if '<' in card else '\n\nOffice: Kent, WA 98032')
+            with self.subTest(card=card):
+                result=self.check(text)
+                self.assertEqual((result['status'],result['country'],result['location_type']),('not_established',None,'headquarters'),result)
+        self.assert_country('HQ\n\nCanada\n\nOffice: Kent, WA 98032','Canada','headquarters')

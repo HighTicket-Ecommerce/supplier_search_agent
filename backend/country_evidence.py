@@ -35,14 +35,17 @@ def _geography(quote):
 
 def _location_cards(text, source_url):
     """Bound location values before geography, preserving adjacent label/address cards."""
-    blocks = [value for part in re.split(r"\n\s*\n", text) if (value := normalize_quote(part))]
-    bare_label = re.compile(r"(?:(?:our|global|corporate|registered|knoxville)\s+)*(?:headquarters|hq|head office|office(?: address)?)[: ]*$", re.I)
+    blocks = [value for part in re.split(r"\n+", text) if (value := normalize_quote(part))]
+    bare_label = re.compile(r"(?:[^\W\d_]+\s+){0,3}(?:headquarters|hq|head office|office(?: address)?)[: ]*$", re.I)
     for index, block in enumerate(blocks):
         for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Z][a-z])", block):
             if not _ANCHOR.search(sentence) and location_quote_kind(sentence, text, source_url) != "company_base":
                 continue
             value = sentence
             forced_kind = None
+            inline = re.match(r"(?P<label>(?:[^\W\d_]+\s+){0,2}(?:headquarters|hq|head office|office))\s*[:|]?\s+(?P<place>[^.!?]+)[.!?]?$", sentence, re.I)
+            if inline and not re.search(r"\b(?:is|are|in|at|based|located)\b", inline['place'], re.I):
+                forced_kind = "headquarters" if re.search(r"headquarters|hq|head office", inline['label'], re.I) else "office"
             if bare_label.fullmatch(sentence):
                 forced_kind = "headquarters" if re.search(r"headquarters|hq|head office", sentence, re.I) else "office"
                 values = []
@@ -58,7 +61,7 @@ def _location_cards(text, source_url):
                         break
                     # Only address-like values or a short proper place name can bind a label.
                     if not (re.search(r"\d|,", following) or _geography(following) or
-                            re.fullmatch(r"[A-Z][a-z]+(?: [A-Z][a-z]+){0,2}", following)):
+                            re.fullmatch(r"[^\W\d_]+(?:[ '-][^\W\d_]+){0,4}", following)):
                         break
                     if re.search(r"workshop|factory|warehouse|showroom|customer|supplier|partner|products?|services?", following, re.I):
                         break
