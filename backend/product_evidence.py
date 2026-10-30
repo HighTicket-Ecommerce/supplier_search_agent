@@ -28,7 +28,7 @@ _CHILLER_PART = re.compile(
 _RELATED = re.compile(r"\b(?:related|recommended|accessories|standalone|components?|module)\b", re.I)
 _ACCESSORY_TITLE = re.compile(r"\b(?:filters?|covers?|hoses?|compartments?|accessor(?:y|ies)|components?|modules?)\b", re.I)
 _CATALOGUE_LIST = re.compile(r"\b(?:catalog(?:ue)?|product range|product list|our range|our products|products we (?:offer|sell))\b", re.I)
-_EXCLUDED_HEADING = re.compile(r"\b(?:not included|excluded|sold separately|optional|accessories|add[ -]ons?)\b", re.I)
+_EXCLUDED_HEADING = re.compile(r"^(?:what(?:\'s| is)\s+)?(?:not included|excluded|sold separately|optional(?: accessories| components)?|accessories|add[ -]ons?)\s*[:?-]?$", re.I)
 _CONFIGURATION = re.compile(r"\b(?:bundles?|package|pairing|paired|all[ -]in[ -]one|complete systems?)\b", re.I)
 
 
