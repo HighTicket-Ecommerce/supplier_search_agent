@@ -18,15 +18,29 @@ LEGAL_SUFFIXES = {
 }
 
 
+def _name_tokens(value):
+    # Latin accent folding is intentional; marks in other scripts can distinguish
+    # entirely different names (e.g. Japanese voicing and Indic vowel signs).
+    result, latin_base = [], False
+    for char in unicodedata.normalize("NFKD", value).casefold():
+        if unicodedata.category(char).startswith("M"):
+            if not latin_base:
+                result.append(char)
+        elif char.isalnum():
+            result.append(char)
+            latin_base = unicodedata.name(char, "").startswith("LATIN ")
+        else:
+            result.append(" ")
+            latin_base = False
+    return unicodedata.normalize("NFC", "".join(result)).split()
+
+
 def name_key(value):
-    value = unicodedata.normalize("NFKD", value).casefold()
-    return "".join(c for c in value if c.isalnum())
+    return "".join(_name_tokens(value))
 
 
 def core_name_key(value):
-    normalized = unicodedata.normalize("NFKD", value).casefold()
-    normalized = "".join(c for c in normalized if not unicodedata.combining(c))
-    tokens = re.findall(r"[^\W_]+", normalized, re.UNICODE)
+    tokens = _name_tokens(value)
     while tokens and tokens[-1] in LEGAL_SUFFIXES:
         tokens.pop()
     return "".join(tokens)
