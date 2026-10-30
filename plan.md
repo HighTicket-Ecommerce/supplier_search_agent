@@ -4,7 +4,7 @@ Updated: 2026-10-30
 
 **Goal:** find more relevant suppliers, verify the requested products and company identities, and produce useful evidence with predictable research costs.
 
-**Current phase:** [eighteen focused PRs are open](docs/pull-request-stack-2026-10-30.md) in GitHub native stack 19, targeting `main`. The user authorized publication on 2026-10-30; the earlier PR hold is lifted, while merging remains with the user. All eighteen exact branch snapshots passed their offline suites (latest: 194 tests); the upgraded dependency set passed pip-audit. GitHub review checks/CI status must be checked separately before merging; no Actions runs had appeared at publication. No PR was merged, and no deployment or source-list/export work was performed. The locally validated selection/qualification changes are preserved. Geographic query precision, Canada discovery, broader relationship/category scope and independent final evaluation remain follow-ups.
+**Current phase:** [eighteen focused PRs are open](docs/pull-request-stack-2026-10-30.md) in GitHub native stack 19, targeting `main`. The user authorized publication on 2026-10-30; the earlier PR hold is lifted, while merging remains with the user. All eighteen exact branch snapshots passed their offline suites (latest: 229 tests); the upgraded dependency set passed pip-audit. GitHub review checks/CI status must be checked separately before merging; no Actions runs had appeared at publication. No PR was merged, and no deployment or source-list/export work was performed. The 32 initial Greptile findings have repairs and regression coverage; see the [repair report](docs/greptile-review-fixes-2026-10-30.md). The locally validated selection/qualification changes are preserved. Geographic query precision, Canada discovery, broader relationship/category scope and independent final evaluation remain follow-ups.
 
 ## Already completed
 
@@ -248,3 +248,12 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 | 2026-10-28 | Bounded fallback validation on `a4cf388` | [Results](docs/benchmarks/cold-plunge-2026-10-27/fetch-fallback-results.md). Eight fresh raw pages returned across two previews; Redwood qualifies, Morozko needs role review. Both controlled historical-timeout + fresh-browser probes recover a homepage; no natural fallback or probe qualification claimed. Nine retained supplier quotes verified. Ten new actor runs + two model calls, browser usage $0.0047 and combined execution approximately $0.059. All actors terminal, no exports/final-check cases. Production backend remains unchanged and fallback opt-in; 143 tests pass |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.
+
+## Greptile review repair — 2026-10-30
+
+- [x] Address the 32 initial findings with focused fixes and 35 additional regression methods.
+- [x] Rebase the topic chain and validate all eighteen tracked snapshots independently (final application: 229 tests).
+- [x] Preserve historical labels/captures, private references and original branch backup refs.
+- [ ] Confirm fresh automated review results on updated remote heads before merging.
+
+No new paid supplier evaluation, source-list/export change, server, merge or deployment was part of this repair round. See the [repair report](docs/greptile-review-fixes-2026-10-30.md) and [stack order](docs/pull-request-stack-2026-10-30.md).
