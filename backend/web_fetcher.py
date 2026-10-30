@@ -10,6 +10,7 @@ from backend.filters import is_blocked_domain
 from backend.location_evidence import has_company_location
 from backend.utils import domain_from_url, normalize_url, is_search_destination
 from backend.research_context import JobStopped, LimitReached
+from backend.product_brief import positive_brief
 
 _CACHE = {}
 MAX_HTML_CHARS = 1_500_000
@@ -80,7 +81,7 @@ def _product_terms(product):
 
 
 def _positive_product_brief(product):
-    return re.split(r"(?<![\w-])(?:no|not|excluding|exclude|except|without)(?![\w-])", product, maxsplit=1, flags=re.I)[0]
+    return positive_brief(product)
 
 
 def _page_priority(url, product, label=""):
