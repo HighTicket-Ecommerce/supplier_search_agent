@@ -47,6 +47,37 @@ class FoundationFollowupTests(unittest.TestCase):
         self.assertEqual(a_again.get("collection_failures"), [failure])
         self.assertEqual(fetcher.call_count, 2)
 
+    def test_directory_identity_retry_reuses_pages_and_counts_each_check(self):
+        context = self.context(research_mode="distributor_brands", directory_urls=["https://directory.example"],
+                               verify_directory_brands=True, allowed_countries=[], max_candidate_domains=2)
+        url = "https://brand-b.example"
+        source = "We manufacture sauna heaters.\nWe supply sauna heaters.\nBrand B"
+        pages = [{"url": url, "text": source}]
+        entries = [{"supplier_name": name, "source_url": "https://directory.example", "observation_id": name}
+                   for name in ["Brand A", "Brand B", "Brand C"]]
+        def analysis(product, pages, ctx, brand_hint=None):
+            return {"is_product_company": True, "company_name": "Brand B", "supplier_type": "Manufacturer", "owns_brand": True,
+                    "product_match": "supported", "product_kind": "primary", "matched_product_urls": [url], "country": None,
+                    "country_basis": "unknown", "identity_match": "supported" if brand_hint == "Brand B" else "not_established",
+                    "email": None, "phone": None, "confidence": .99, "notes": "offline", "evidence": [
+                        {"claim": "role", "source_url": url, "quote": "We manufacture sauna heaters"},
+                        {"claim": "product_match", "source_url": url, "quote": "We supply sauna heaters"},
+                        {"claim": "identity", "source_url": url, "quote": "Brand B"}]}
+        def lookup(*args, **kwargs):
+            return [] if "brand-b.example" in kwargs.get("seen_domains", set()) else [{"url": url}]
+        with patch.object(research_runner, "fetch_directory", return_value=(entries, {})), \
+             patch.object(research_runner, "run_serp_brand_lookup", side_effect=lookup) as search, \
+             patch.object(supplier_validator, "fetch_website_pages", return_value=pages) as fetch, \
+             patch.object(supplier_validator, "analyze_supplier_with_llm", side_effect=analysis) as model:
+            research_runner.run_research_job(context.job_id, context.request)
+        job = job_store.get_job(context.job_id)
+        self.assertEqual(len(job["accepted"]), 1)
+        self.assertEqual(job["review"][0]["reason"], "shopping_identity_not_established")
+        self.assertEqual(job["processed"], 2)
+        self.assertEqual(search.call_count, 2)
+        self.assertEqual(model.call_count, 2)
+        self.assertEqual(fetch.call_count, 1)
+
     def test_transport_and_http_failures_fall_back_without_policy_bypass(self):
         errors = [public_fetch.urllib3.exceptions.NewConnectionError(None, "refused"),
                   public_fetch.urllib3.exceptions.ReadTimeoutError(None, "/", "timeout"),
