@@ -12,6 +12,10 @@ from backend.models import CatalogueAnalysis, SupplierAnalysis
 class SchemaCompatibilityTests(unittest.TestCase):
     def test_both_outbound_schemas_match_pre_upgrade_runtime(self):
         frozen = json.loads((Path(__file__).parent / "fixtures/pre_upgrade_schemas.json").read_text())
+        # PR #11 deliberately adds two location bases; all other pre-upgrade schema
+        # structure stays frozen. The original fixture remains unchanged.
+        frozen["supplier_analysis"]["properties"]["country_basis"]["enum"] = [
+            "headquarters", "office", "company_base", "manufacturing", "market", "unknown"]
         for name, model in (("supplier_analysis", SupplierAnalysis), ("catalogue_analysis", CatalogueAnalysis)):
             with self.subTest(name=name):
                 response = SimpleNamespace(id="offline", usage=None, choices=[SimpleNamespace(finish_reason="length")])

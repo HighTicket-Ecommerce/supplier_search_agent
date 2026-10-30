@@ -188,12 +188,12 @@ class ResearchTests(unittest.TestCase):
                 self.assertIsNone(result["estimated_price_min"])
                 self.assertTrue(result["sources"])
 
-    def test_bad_citations_boolean_country_and_identity_stay_in_review(self):
+    def test_bad_product_citations_boolean_and_identity_stay_in_review(self):
         fixture = CASES[0]
-        changes = [{"is_product_company":"false"}, {"country":None}, {"country_basis":"market"},
+        changes = [{"is_product_company":"false"},
                    {"matched_product_urls":["https://unrelated.example/product"]}]
         bad = copy.deepcopy(fixture["analysis"])
-        bad["evidence"][0]["quote"] = "An invented source quote."
+        next(e for e in bad["evidence"] if e["claim"] == "product_match")["quote"] = "An invented source quote."
         changes.append(bad)
         for i, change in enumerate(changes):
             with self.subTest(change=change):

@@ -1,5 +1,7 @@
 # Exact supplier-role evidence — 2026-10-27
 
+Follow-up: [office-country consistency validation](office-country-results.md) resolves the Penguin/Redwood location-basis holds, preserving office versus global-HQ distinctions. The role results below remain unchanged.
+
 **Company roles now need evidence for the specific classification.** Design alone cannot establish Manufacturer; contact text, store titles and product lists cannot establish a role. Unsupported classifications stay in review. A bounded source-only repair can recover an explicit quote for the same proposed role from captured pages, without another provider call.
 
 Final application: `e0cb37e2bb74e7f83dd95c27e30acb45fa0a4761`, branch `fix/supplier-role-evidence`, based on `6486a27`. The first preview used guard-only `97b5a18`; the second preview and Redwood saved-page reanalysis used the final application. Sun Home's final quote repair was validated against its first preview captures, without another paid run. This is targeted development validation, not a new full-cohort score.
