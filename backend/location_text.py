@@ -50,3 +50,9 @@ def ambiguous_shared_location(text):
 
 def shared_headquarters(text):
     return bool(_shared_location(text)) and not ambiguous_shared_location(text)
+
+
+def location_clause(text):
+    """Bound the physical location assertion before independent markets/logistics."""
+    text = re.sub(r"^.*?\bfrom\s+(?=our\s+(?:headquarters|hq|head office|office)\b)", "", text, flags=re.I)
+    return re.split(r"(?:[;,]\s*|\s+(?:and\s+)?)(?:(?:we|our company)\s+(?:also\s+)?(?:sell|ship|deliver|serve|supply|distribute|export)\b|serving\b|(?:and\s+)?our\s+new\s+office\b|\(\s*new\s+office\b)", text, maxsplit=1, flags=re.I)[0].strip(' ,;')

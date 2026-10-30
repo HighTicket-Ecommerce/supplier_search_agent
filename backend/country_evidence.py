@@ -8,14 +8,8 @@ import re
 from backend.location_evidence import HQ_LOCATION_TYPES, location_quote_kind, normalize_quote
 
 
-_US_CODES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split()
-_CA_CODES = "AB BC MB NB NL NS NT NU ON PE QC SK YT".split()
-_US_NAMES = ("Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|"
-             "Florida|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|"
-             "Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|"
-             "New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|"
-             "South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming")
-_CA_NAMES = "Alberta|British Columbia|Manitoba|New Brunswick|Newfoundland and Labrador|Nova Scotia|Northwest Territories|Nunavut|Ontario|Prince Edward Island|Quebec|Québec|Saskatchewan|Yukon"
+from backend.location_text import US_CODES as _US_CODES, CA_CODES as _CA_CODES, US_NAMES as _US_NAMES, CA_NAMES as _CA_NAMES, location_clause
+
 _COUNTRIES = {"United States": r"United States(?: of America)?|USA|U\.S\.(?:A\.)?",
               "Canada": r"Canada", "United Kingdom": r"United Kingdom|Great Britain|England|UK",
               "Germany": r"Germany|Deutschland", "Australia": r"Australia", "China": r"China"}
@@ -27,7 +21,7 @@ _PRIORITY = {"headquarters": 0, "office": 1, "company_base": 2}
 def _geography(quote):
     countries = {name for name, pattern in _COUNTRIES.items() if re.search(r"\b(?:"+pattern+r")(?!\w)", quote, re.I)}
     # A postal region disambiguates Ontario, California from Ontario province.
-    if re.search(r",\s*(?:"+"|".join(_US_CODES)+r")\s+\d{5}(?:-\d{4})?\b", quote, re.I):
+    if re.search(r",\s*(?:"+"|".join(_US_CODES)+"|"+_US_NAMES+r")\s+\d{5}(?:-\d{4})?\b", quote, re.I):
         countries.add("United States")
     elif re.search(r",\s*(?:"+"|".join(_CA_CODES)+r")\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\b", quote, re.I):
         countries.add("Canada")
@@ -73,7 +67,7 @@ def _location_cards(text, source_url):
                     continue
                 value = " ".join([sentence]+values)
             # A following market statement is not part of an address value.
-            value = re.split(r"\b(?:we|our company)\s+(?:sell|ship|deliver|serve|supply|distribute|export)\b", value, maxsplit=1, flags=re.I)[0].strip(" ,")
+            value = location_clause(value)
             kind = location_quote_kind(value, text, source_url)
             if kind not in HQ_LOCATION_TYPES:
                 # Keep unresolved, explicitly labelled HQ cards (e.g. Singapore).

@@ -14,3 +14,11 @@ class CountryFollowupTests(unittest.TestCase):
 
     def test_shipping_after_an_address_is_outside_the_location_card(self):
         self.assert_country('Headquarters\n\nKent, WA 98032\n\nNow shipping to Canada!', 'United States','headquarters')
+
+    def test_sales_markets_do_not_extend_the_headquarters_address(self):
+        for text in ['Headquarters: Kent, WA 98032; we also sell to Canada.',
+                     'Headquarters: Kent, WA 98032, serving the USA and Canada.',
+                     'Selling across Canada from our headquarters in Kent, WA 98032.',
+                     'Headquarters\n\nKent, WA 98032\n\nWe also sell to Canada.',
+                     'Headquarters: 1234 Example Ave, Ontario, California 91761']:
+            with self.subTest(text=text): self.assert_country(text,'United States','headquarters')

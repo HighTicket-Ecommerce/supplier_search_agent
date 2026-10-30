@@ -6,7 +6,7 @@ Those still require the supplier analysis and its official source.
 import re
 import unicodedata
 from bisect import bisect_right
-from backend.location_text import SELF_LOCATION_RE, NEGATION, ambiguous_shared_location, shared_headquarters
+from backend.location_text import SELF_LOCATION_RE, NEGATION, ambiguous_shared_location, shared_headquarters, location_clause
 
 
 def normalize_quote(value):
@@ -97,7 +97,7 @@ def _contexts(quote, source, *, sentence_bound=True):
 
 def location_quote_kind(quote, source="", source_url=""):
     """Classify a literal location passage; a Contact/About URL grants no location type."""
-    quote = normalize_quote(quote)
+    quote = location_clause(normalize_quote(quote))
     # An independent shipping action is not the subject of the location assertion.
     quote = re.split(r",?\s+(?:and\s+)?(?:we\s+)?(?:ship(?:s|ping)?\s+(?:across|to|worldwide)|offer\s+free\s+shipping)\b", quote, maxsplit=1, flags=re.I)[0]
     if not quote or _NEGATED.search(quote) or _NON_CURRENT.search(quote) or ambiguous_shared_location(quote):
@@ -116,6 +116,7 @@ def location_quote_kind(quote, source="", source_url=""):
     contexts = _contexts(quote, source) if source else [quote]
     rejected_kind = "unknown"
     for context in contexts:
+        context = location_clause(context)
         if _NEGATED.search(context) or _NON_CURRENT.search(context) or ambiguous_shared_location(context):
             continue
         prefix = context.casefold().split(quote.casefold(), 1)[0]
