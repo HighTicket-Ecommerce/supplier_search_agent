@@ -72,3 +72,23 @@ class FoundationFollowupTests(unittest.TestCase):
                 directory_runner.fetch_directory("https://example.com/brands", self.context(), limit=1)
         self.assertIs(raised.exception.__cause__, error)
         browser.assert_not_called()
+
+    def test_international_domains_use_one_ascii_identity_for_dns_host_and_tls(self):
+        for scheme in ("http", "https"):
+            with self.subTest(scheme=scheme):
+                context = self.context()
+                response = MagicMock(status=200, headers={})
+                response.stream.return_value = [b"brands"]
+                pool = MagicMock(); pool.urlopen.return_value = response
+                addresses = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]
+                pool_type = "HTTPSConnectionPool" if scheme == "https" else "HTTPConnectionPool"
+                with patch.object(socket, "getaddrinfo", return_value=addresses) as dns, \
+                     patch.object(public_fetch.urllib3, pool_type, return_value=pool) as connection:
+                    public_fetch.fetch_public(scheme+"://пример.рф/brands", context)
+                expected = "xn--e1afmkfd.xn--p1ai"
+                self.assertEqual(dns.call_args.args[0], expected)
+                self.assertEqual(pool.urlopen.call_args.kwargs["headers"]["Host"], expected)
+                self.assertEqual(connection.call_args.kwargs["host"], "93.184.216.34")
+                if scheme == "https":
+                    self.assertEqual(connection.call_args.kwargs["server_hostname"], expected)
+                    self.assertEqual(connection.call_args.kwargs["assert_hostname"], expected)

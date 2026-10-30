@@ -19,6 +19,13 @@ class URLPolicyError(ValueError):
     """The URL is forbidden; another transport must not bypass this decision."""
 
 
+def _ascii_hostname(parsed):
+    try:
+        return parsed.hostname.encode("idna").decode("ascii").lower()
+    except (UnicodeError, AttributeError) as exc:
+        raise URLPolicyError("Invalid public hostname") from exc
+
+
 def check_public_url(url):
     try:
         parsed = urlsplit(url)
@@ -31,7 +38,7 @@ def check_public_url(url):
     except ValueError as exc:
         raise URLPolicyError("Invalid URL port") from exc
     try:
-        addresses = socket.getaddrinfo(parsed.hostname, port)
+        addresses = socket.getaddrinfo(_ascii_hostname(parsed), port)
     except OSError as exc:
         raise PublicFetchError("Public address lookup failed") from exc
     if not addresses or any(not ipaddress.ip_address(a[4][0]).is_global for a in addresses):
@@ -45,8 +52,8 @@ def _connection(url, address, timeout):
     options = {"host": address, "port": parsed.port or (443 if parsed.scheme == "https" else 80),
                "timeout": timeout, "maxsize": 1}
     if parsed.scheme == "https":
-        return urllib3.HTTPSConnectionPool(**options, server_hostname=parsed.hostname,
-            assert_hostname=parsed.hostname, cert_reqs="CERT_REQUIRED", ca_certs=certifi.where())
+        return urllib3.HTTPSConnectionPool(**options, server_hostname=_ascii_hostname(parsed),
+            assert_hostname=_ascii_hostname(parsed), cert_reqs="CERT_REQUIRED", ca_certs=certifi.where())
     return urllib3.HTTPConnectionPool(**options)
 
 
@@ -60,7 +67,7 @@ def fetch_public(url, context, *, json_body=None, max_bytes=3_000_000):
         try:
             parsed = urlsplit(url)
             pool = _connection(url, address, max(1, min(15, context.remaining_seconds())))
-            host = parsed.hostname
+            host = _ascii_hostname(parsed)
             if ":" in host:
                 host = "[" + host + "]"
             if parsed.port:
