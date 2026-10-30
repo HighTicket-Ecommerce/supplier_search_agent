@@ -1,5 +1,7 @@
 # Cold-plunge benchmark results — 2026-10-27
 
+Latest: [complete development/anchor rerun](development-rerun-results.md), following the [targeted evidence-collection/HQ checks](evidence-collection-results.md). The latest rerun covers all 16 development/anchor sites, with frozen-label qualification coverage 4/6 and a remaining BlueCube HQ ambiguity. This document preserves the earlier benchmark results. No new final-check evaluation is included.
+
 Labels were frozen before any agent run: [brief.md](brief.md), [labels.json](labels.json).  
 Jobs live in ignored `var/eval/cold-plunge-2026-10-27/`. No Sheets writes. No discovery. No Shopify catalogue.
 
