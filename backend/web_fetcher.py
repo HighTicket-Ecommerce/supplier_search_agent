@@ -80,7 +80,7 @@ def _product_terms(product):
 
 
 def _positive_product_brief(product):
-    return re.split(r"\b(?:no|not|excluding|exclude|except|without)\b", product, maxsplit=1, flags=re.I)[0]
+    return re.split(r"(?<![\w-])(?:no|not|excluding|exclude|except|without)(?![\w-])", product, maxsplit=1, flags=re.I)[0]
 
 
 def _page_priority(url, product, label=""):
