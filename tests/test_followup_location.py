@@ -46,3 +46,12 @@ class LocationFollowupTests(unittest.TestCase):
                 evidence, _ = supplier_validator.validate_evidence(
                     [{"claim": "country", "source_url": url, "quote": text}], [{"url": url, "text": text}])
                 self.assertEqual(bool(evidence), expected)
+
+    def test_shipping_actions_do_not_change_location_subject(self):
+        for source in ["We're based in Toronto, Ontario and ship across Canada.",
+                       "We're based in Toronto, Ontario, and we ship across Canada.",
+                       "Proudly based in Toronto, Ontario, we offer free shipping across Canada."]:
+            quote = source.split(' and ship')[0].split(', and we')[0].split(', we offer')[0]
+            self.assertEqual(location_evidence.location_quote_kind(quote, source), 'company_base')
+        source = 'Located in Toronto, Ontario, our factory produces heaters.'
+        self.assertEqual(location_evidence.location_quote_kind('Located in Toronto, Ontario', source), 'factory')

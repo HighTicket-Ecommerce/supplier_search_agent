@@ -45,7 +45,7 @@ HQ_LOCATION_TYPES = {"headquarters", "office", "company_base"}
 
 
 def _site_kind(text):
-    shared_hq = bool(re.search(r"\bour\s+(?:headquarters|hq|head office)\s+and\s+(?:factory|warehouse)\s+(?:are|is)\s+(?:in|at)\b", text, re.I))
+    shared_hq = shared_headquarters(text)
     return next((kind for kind, pattern in _SITE_TYPES if pattern.search(text)
                  and not (shared_hq and kind in {"factory", "warehouse"})), None)
 
@@ -92,9 +92,13 @@ def _contexts(quote, source, *, sentence_bound=True):
 def location_quote_kind(quote, source="", source_url=""):
     """Classify a literal location passage; a Contact/About URL grants no location type."""
     quote = normalize_quote(quote)
+    # An independent shipping action is not the subject of the location assertion.
+    quote = re.split(r",?\s+(?:and\s+)?(?:we\s+)?(?:ship(?:s|ping)?\s+(?:across|to|worldwide)|offer\s+free\s+shipping)\b", quote, maxsplit=1, flags=re.I)[0]
     if not quote or _NEGATED.search(quote) or ambiguous_shared_location(quote):
         return "unknown"
     if shared_headquarters(quote):
+        if source and any(ambiguous_shared_location(c) for c in _contexts(quote, source)):
+            return "unknown"
         return "headquarters"
     if kind := _site_kind(quote):
         return kind
@@ -118,7 +122,7 @@ def location_quote_kind(quote, source="", source_url=""):
         if has_value and (_HEAD_OFFICE.search(prefix) or _OFFICE_CONTEXT.search(prefix)):
             return "headquarters" if _HEAD_OFFICE.search(prefix) else "office"
         # A separate self-attributed shipping action is not the location's subject.
-        subject_context = re.split(r",\s*we\s+(?:ship|deliver)\b", context, maxsplit=1, flags=re.I)[0]
+        subject_context = re.split(r",?\s+(?:and\s+)?(?:we\s+)?(?:ship(?:s|ping)?\s+(?:across|to|worldwide)|offer\s+free\s+shipping)\b", context, maxsplit=1, flags=re.I)[0]
         if kind := _site_kind(subject_context):
             rejected_kind = kind
         elif _BASED.search(quote) or _SELF_LOCATION.search(quote):
