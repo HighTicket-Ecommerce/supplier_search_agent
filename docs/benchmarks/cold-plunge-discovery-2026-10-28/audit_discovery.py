@@ -41,7 +41,7 @@ def main():
             outcomes[domain_from_url(row["url"])] = {"group": group, "reason": row.get("reason")}
     raw_rows, seen = [], set()
     for batch in read("serp.json", []):
-        for page in batch.get("pages", []):
+        for page in batch.get("items", batch.get("pages", [])):
             for row in page.get("organicResults", []):
                 url = normalize_url(row.get("url") or "")
                 host = domain_from_url(url)

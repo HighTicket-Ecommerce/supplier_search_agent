@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +16,39 @@ sys.path.insert(0, str(ROOT))
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def capture_actor_value(value):
+    """Retain raw content, excluding credentials and transport headers/cookies."""
+    private = {"headers", "requestheaders", "responseheaders", "authorization", "proxyauthorization",
+               "token", "apikey", "apifytoken", "password", "cookies", "cookie", "setcookie"}
+    if isinstance(value, dict):
+        return {key: capture_actor_value(item) for key, item in value.items()
+                if re.sub(r"[^a-z]", "", key.casefold()) not in private}
+    if isinstance(value, list):
+        return [capture_actor_value(item) for item in value]
+    return value
+
+
+def trace_actor(original, records, save, filename):
+    def traced(actor, run_input, context, **kwargs):
+        entry = {"actor": actor, "input": capture_actor_value(run_input), "status": "started"}
+        records.append(entry)
+        save(filename, records)
+        operation_start = len(context.operations)
+        try:
+            items = original(actor, run_input, context, **kwargs)
+            # Capture at the actor boundary, before parsing, truncation or rejection.
+            entry.update(status="returned", items=capture_actor_value(items))
+            return items
+        except Exception as exc:
+            entry.update(status="error", error_type=type(exc).__name__)
+            raise
+        finally:
+            entry["actor_runs"] = [{key: operation[key] for key in ("run_id", "dataset_id", "status") if key in operation}
+                                   for operation in context.operations[operation_start:]]
+            save(filename, records)
+    return traced
 
 
 def main():
@@ -33,6 +67,7 @@ def main():
     from backend.job_store import get_job, init_job
     from backend.master_index import load_reference, reference_directory
     from backend.models import ResearchRequest
+    from backend.config import model_settings_snapshot
     reference = load_reference(args.master_reference_id)
     master_path = reference_directory() / (args.master_reference_id + ".json")
     request = ResearchRequest(product="Complete cold plunge systems", candidate_urls=[],
@@ -45,11 +80,11 @@ def main():
         max_runtime_seconds=600, max_external_calls=15, max_execution_cost_usd=6,
         max_actor_charge_usd=0.5)
     sources = sorted((ROOT / "backend").glob("*.py")) + [Path(__file__).resolve(), Path(__file__).with_name("brief.md")]
-    manifest = {"started_at": time.time(), "settings": request.model_dump(),
+    manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {str(p.relative_to(ROOT)): digest(p) for p in sources},
         "master_sha256": digest(master_path), "master_record_count": reference["record_count"],
-        "preview_only": True, "sheets_writes": 0}
+        "preview_only": True, "sheets_writes": 0, "capture_format_version": 2}
     output.mkdir(parents=True, exist_ok=True)
     try:
         with (output / "manifest.json").open("x") as file:
@@ -67,20 +102,14 @@ def main():
     web_fetcher._CACHE.clear()
     serp, selections, attempts, analyses = [], [], [], []
     original_actor = apify_runner.run_actor
+    original_website_actor = web_fetcher.run_actor
+    website_actor_records = []
     original_discover = research_runner.run_serp_discovery
     original_read = web_fetcher._read_page
     original_analyze = supplier_validator.analyze_supplier_with_llm
 
-    def traced_actor(actor, run_input, context, **kwargs):
-        entry = {"actor": actor, "input": run_input, "status": "started"}
-        serp.append(entry)
-        save("serp.json", serp)
-        try:
-            pages = original_actor(actor, run_input, context, **kwargs)
-            entry.update(status="returned", pages=pages)
-            return pages
-        finally:
-            save("serp.json", serp)
+    traced_actor = trace_actor(original_actor, serp, save, "serp.json")
+    traced_website_actor = trace_actor(original_website_actor, website_actor_records, save, "website_actor_records.json")
 
     def traced_discover(*call_args, **kwargs):
         rows = original_discover(*call_args, **kwargs)
@@ -116,6 +145,7 @@ def main():
         return analysis
 
     apify_runner.run_actor = traced_actor
+    web_fetcher.run_actor = traced_website_actor
     research_runner.run_serp_discovery = traced_discover
     web_fetcher._read_page = traced_read
     supplier_validator.analyze_supplier_with_llm = traced_analyze
@@ -124,6 +154,7 @@ def main():
         research_runner.run_research_job(job_id, request)
     finally:
         apify_runner.run_actor = original_actor
+        web_fetcher.run_actor = original_website_actor
         research_runner.run_serp_discovery = original_discover
         web_fetcher._read_page = original_read
         supplier_validator.analyze_supplier_with_llm = original_analyze
