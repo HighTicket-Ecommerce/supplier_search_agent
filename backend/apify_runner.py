@@ -13,21 +13,25 @@ def run_serp_discovery(product, context, *, country="United States", limit=20, q
         "maxPagesPerQuery": 1, "maximumLeadsEnrichmentRecords": 0,
         "saveHtml": False, "saveHtmlToKeyValueStore": False,
     }, context, result_limit=10)
-    results = []
-    seen = set()
+    results, flagged, seen = [], [], set()
     for page in pages:
         for row in page.get("organicResults", []):
             url = normalize_url(row.get("url") or "")
             domain = domain_from_url(url)
-            if not domain or domain in seen or is_search_destination(url) or is_blocked_domain(domain):
+            if not domain or domain in seen or is_search_destination(url):
                 continue
             seen.add(domain)
-            results.append({"url": url, "domain": domain, "title": row.get("title", ""),
-                            "snippet": row.get("description", ""), "discovery_source": "serp",
-                            "query": page.get("searchQuery", {}).get("term"), "search_country": country})
+            item = {"url": url, "domain": domain, "title": row.get("title", ""),
+                    "snippet": row.get("description", ""), "discovery_source": "serp",
+                    "query": page.get("searchQuery", {}).get("term"), "search_country": country}
+            if is_blocked_domain(domain):
+                item["skip_reason"] = "blocked_domain"
+                flagged.append(item)
+                continue
+            results.append(item)
             if len(results) >= limit:
-                return results
-    return results
+                return flagged + results
+    return flagged + results
 
 
 def run_serp_brand_lookup(hint, product, context, *, country="United States", limit=3):

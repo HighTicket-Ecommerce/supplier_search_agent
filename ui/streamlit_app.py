@@ -229,6 +229,10 @@ def render_results(result):
     if result.get("directory_coverage"):
         with st.expander("Directory coverage"):
             st.json(result["directory_coverage"])
+    if result.get("skipped"):
+        with st.expander("Skipped sites (" + str(len(result["skipped"])) + ")"):
+            st.caption("Discovered sites already in the master list, and blocked retailers or marketplaces. Supplied websites are still checked.")
+            st.dataframe(pd.DataFrame(result["skipped"]), width="stretch", hide_index=True)
     with st.expander("Full evidence and comparison details"):
         st.json({k: result.get(k, []) for k in ["accepted", "review", "rejected", "observations"]})
     qualified = result.get("accepted", [])

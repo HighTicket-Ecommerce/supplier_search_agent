@@ -14,7 +14,7 @@ from backend.directory_runner import fetch_directory
 
 def run_research_job(job_id, req):
     context = ResearchContext(job_id, req)
-    accepted, review, rejected = [], [], []
+    accepted, review, rejected, skipped = [], [], [], []
     seen = set()
     resolved = set()
     identity_attempts = set()
@@ -24,10 +24,18 @@ def run_research_job(job_id, req):
     master = None
 
     def save(**extra):
-        update_job(job_id, accepted=accepted, review=review, rejected=rejected, processed=processed,
-                   total=max(len(seen), len(observations)), target_suppliers=req.target_suppliers,
+        update_job(job_id, accepted=accepted, review=review, rejected=rejected, skipped=skipped,
+                   processed=processed, total=max(len(seen), len(observations)), target_suppliers=req.target_suppliers,
                    observations=observations, directory_coverage=coverage, warnings=warnings,
                    master_reference=reference_summary(master.reference) if master else None, **extra)
+
+    def skip(item, url, domain, reason):
+        if domain in seen:
+            return
+        seen.add(domain)
+        skipped.append({"url": url, "domain": domain, "reason": reason,
+                        "discovery_source": item.get("discovery_source"), "title": item.get("title", "")})
+        save()
 
     def enough():
         return len(accepted) >= req.target_suppliers or processed >= req.max_candidate_domains
@@ -43,7 +51,14 @@ def run_research_job(job_id, req):
             hint = (item.get("brand_name") or "").strip().casefold()
             identity_key = (domain, hint)
             retry_identity = bool(hint and domain in retryable_identities and identity_key not in identity_attempts)
-            if not domain or (domain in seen and not retry_identity) or is_search_destination(url) or is_blocked_domain(domain):
+            if not domain or (domain in seen and not retry_identity) or is_search_destination(url):
+                continue
+            is_seed = item.get("discovery_source") == "seed"
+            if not is_seed and (item.get("skip_reason") == "blocked_domain" or is_blocked_domain(domain)):
+                skip(item, url, domain, "blocked_domain")
+                continue
+            if not is_seed and master and master.has_exact_host(domain):
+                skip(item, url, domain, "already_in_master")
                 continue
             seen.add(domain)
             identity_attempts.add(identity_key)
@@ -53,7 +68,9 @@ def run_research_job(job_id, req):
                                             brand_hint=item.get("brand_name"), discovery_source=item.get("discovery_source"),
                                             price_hint=item.get("price_hint_raw"))
                 supplier["discovery"] = {k: v for k, v in item.items() if k != "url"}
-                supplier["master_match"] = master.match(supplier.get("supplier_name", ""), supplier.get("url", url)) if master else match_without_reference()
+                supplier["master_match"] = (master.match(supplier.get("supplier_name", ""), supplier.get("url", url),
+                                                         alternate_urls=(url,))
+                                            if master else match_without_reference())
                 final_domain = domain_from_url(supplier.get("url", url))
                 if final_domain in resolved:
                     supplier.update(status="review", reason="duplicate_resolved_website")

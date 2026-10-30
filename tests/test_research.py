@@ -19,7 +19,7 @@ os.environ["SUPPLIER_API_KEY"] = "offline-test-api-key"
 os.environ["SUPPLIER_UI_PASSWORD"] = ""
 
 from fastapi.testclient import TestClient
-from backend import main, config, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner, utils, model_client
+from backend import main, config, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner, utils, model_client, filters
 from backend.google_shopping_runner import normalize_shopping_items
 from backend.models import ResearchRequest, SupplierAnalysis
 from backend.research_context import ResearchContext, LimitReached, JobStopped
@@ -158,6 +158,24 @@ class ResearchTests(unittest.TestCase):
         with patch.object(apify_runner, "run_actor", return_value=[]) as actor:
             apify_runner.run_serp_discovery("Sauna", context, country="United Kingdom", limit=1)
         self.assertEqual(actor.call_args.args[1]["countryCode"], "gb")
+
+    def test_blocklist_matches_labels_not_substrings(self):
+        self.assertFalse(hasattr(filters, "TLD_COUNTRY"))
+        kept = ["fellowes.com", "championtarget.com", "betsy.com", "abbc.com", "notlowes.com"]
+        blocked = ["lowes.com", "www.lowes.com", "target.com", "amazon.co.uk", "wikipedia.org",
+                   "en.wikipedia.org", "bbc.co.uk"]
+        self.assertEqual([d for d in kept if filters.is_blocked_domain(d)], [])
+        self.assertEqual([d for d in blocked if not filters.is_blocked_domain(d)], [])
+
+    def test_serp_flags_blocked_hosts_without_counting_them(self):
+        context = self.context()
+        pages = [{"organicResults": [{"url": "https://www.amazon.com/plunge"},
+                                     {"url": "https://fellowes.com/about"}, {"url": "https://b.example"}]}]
+        with patch.object(apify_runner, "run_actor", return_value=pages):
+            rows = apify_runner.run_serp_discovery("Sauna", context, country="Canada", limit=1)
+        self.assertEqual([r["domain"] for r in rows], ["amazon.com", "fellowes.com"])
+        self.assertEqual(rows[0]["skip_reason"], "blocked_domain")
+        self.assertNotIn("skip_reason", rows[1])
 
     def test_captured_supplier_cases_against_real_qualification_gates(self):
         for i, fixture in enumerate(CASES):
