@@ -1,5 +1,7 @@
 # Office-country evidence consistency — 2026-10-28
 
+Follow-up: [bounded fetch-fallback validation](fetch-fallback-results.md) checks fresh Morozko/Redwood fetching and controlled timeout-to-browser recovery. The location results below remain unchanged.
+
 **Penguin and Redwood now qualify from verified US office evidence without being described as confirmed global headquarters.** Coldture retains its Canadian HQ basis. This resolves the model-country/basis inconsistency recorded in the [role-validation report](role-evidence-results.md).
 
 Application: `e4d32e2239b850d8b1b45324643e8a88f72e5e92`, branch `fix/office-country-evidence`, based on `6559079`. Application files stayed unchanged throughout final validation. These are targeted development checks, not a new full-cohort or final-check benchmark pass.
