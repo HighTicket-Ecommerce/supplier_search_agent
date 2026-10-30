@@ -1,4 +1,4 @@
-"""Bind company roles to the complete cold-plunge category in the benchmark.
+"""Bind company roles to primary cold-plunge category briefs.
 
 Other briefs explicitly report not_required and retain their current checks.
 This is not a legal ownership, named-model alias or authorization audit.
@@ -7,6 +7,7 @@ import re
 
 from backend.location_evidence import normalize_quote
 from backend.product_evidence import required_components
+from backend.product_brief import positive_brief
 from backend.role_evidence import role_object_spans, verify_supplier_role
 
 _PRIMARY = re.compile(r"\b(?:cold[ -]plunges?|ice[ -]baths?)\b", re.I)
@@ -42,9 +43,11 @@ def _primary_object(role, company, context, heading=""):
 
 
 def verify_requested_product_role(product, role, company, evidence, pages):
-    required = required_components(product) == ["tub", "chiller"] and role in {"Manufacturer", "Brand owner"}
+    brief_head = re.split(r"\b(?:with|including)\b", positive_brief(product), maxsplit=1, flags=re.I)[0]
+    primary_brief = bool(_PRIMARY.search(brief_head)) and not _COMPONENT_NOUN.search(brief_head)
+    required = (required_components(product) == ["tub", "chiller"] or primary_brief) and role in {"Manufacturer", "Brand owner"}
     result = {"status": "not_established" if required else "not_required", "claimed_role": role,
-              "scope": "complete_cold_plunge_category" if required else None,
+              "scope": ("complete_cold_plunge_category" if required_components(product) else "cold_plunge_category") if required else None,
               "supporting_evidence": [], "observations": [], "recovered_evidence": [], "source_repair_used": False}
     if not required:
         return result

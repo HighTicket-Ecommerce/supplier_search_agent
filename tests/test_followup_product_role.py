@@ -13,7 +13,7 @@ class ProductRoleFollowupTests(unittest.TestCase):
                      'We manufacture recovery products such as cold plunges and saunas',
                      'We manufacture heaters, saunas and cold plunges in Finland']:
             with self.subTest(text=text): self.assertEqual(self.check(text),'supported')
-        self.assertEqual(self.check('We manufacture saunas, chillers and cold plunges','cold plunges'),'not_required')
+        self.assertEqual(self.check('We manufacture saunas, chillers and cold plunges','cold plunges'),'supported')
 
     def test_component_heads_and_other_verbs_cannot_inherit_production(self):
         for text in ['We manufacture cold plunge lids', 'We manufacture cold plunge and ice bath chillers',
@@ -48,4 +48,19 @@ class ProductRoleFollowupTests(unittest.TestCase):
                     self.assertEqual(row['reason'],'supplier_role_not_established')
             row=fixture.run_case('Example is a leading cold plunge manufacturer')
             self.assertEqual(row['status'],'qualified')
+        finally: fixture.tearDown()
+
+    def test_plain_primary_category_briefs_also_require_a_product_role(self):
+        from test_product_roles import RequestedProductRoleTests
+        fixture=RequestedProductRoleTests(); fixture.setUp()
+        try:
+            for text in ['We manufacture cold plunge lids', 'We manufacture cold plunge and ice bath chillers',
+                         'We manufacture cold plunge ozone systems', 'We manufacture cold plunge stairs and handrails',
+                         'We manufacture cold plunge, sauna and hot tub covers',
+                         'We manufacture compressors powering cold plunge systems',
+                         'We manufacture saunas and stock cold plunges from Acme',
+                         'We manufacture saunas and are authorized dealers of Acme cold plunges',
+                         'Example is a manufacturer of saunas and an authorized dealer of Acme cold plunges']:
+                with self.subTest(text=text): self.assertNotEqual(fixture.run_case(text,product='cold plunges')['status'],'qualified')
+            self.assertEqual(fixture.run_case('We manufacture saunas, chillers and cold plunges',product='cold plunges')['status'],'qualified')
         finally: fixture.tearDown()
