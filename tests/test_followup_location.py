@@ -66,3 +66,8 @@ class LocationFollowupTests(unittest.TestCase):
             if '<' in source:
                 parser = PageHTML(); parser.feed(source); source = ''.join(parser.parts)
             self.assertEqual(location_evidence.location_quote_kind(quote, source), 'headquarters')
+
+    def test_plant_locations_keep_factory_diagnostics(self):
+        for source in ['Our plant is in Toronto, Ontario.', 'Our manufacturing plant is in Toronto, Ontario.']:
+            self.assertEqual(location_evidence.location_quote_kind(source, source), 'factory')
+            self.assertFalse(location_evidence.hq_quote_acceptable(source, source))

@@ -24,7 +24,7 @@ _SITE_TYPES = [(kind, re.compile(pattern, re.I)) for kind, pattern in [
     ("shipping_or_returns", r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|service area)\b|\b(?:your|enter (?:an?|your))\s+(?:office\s+)?address\b"),
     ("customer_or_dealer", r"\b(?:customer|testimonial|dealer)\b"),
     ("workshop", r"\bworkshops?\b"),
-    ("factory", r"\b(?:factory|factories|manufacturing facility|production facility)\b"),
+    ("factory", r"\b(?:factory|factories|(?:manufacturing )?plants?|manufacturing facility|production facility)\b"),
     ("warehouse", r"\b(?:warehouse|distribution cent(?:er|re)|fulfil(?:l)?ment)\b"),
     ("showroom", r"\bshowrooms?\b"),
 ]]
