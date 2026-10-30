@@ -137,20 +137,17 @@ def _page_priority(url, product, label="", *, excluded_products=None, trade_poli
         subjects = [re.split(r"\b(?:with|including|includes?)\b", value, maxsplit=1, flags=re.I)[0]
                     for value in [label, unquote(parsed.path).rsplit("/", 1)[-1].replace("-", " "), unquote(parsed.query)]]
         subject_terms = [_product_terms(value) for value in subjects]
+        excluded_subject = False
         for exclusion in excluded_products or []:
-            # Broad category exclusions must not bury a potentially relevant
-            # dual-purpose product (e.g. a hot/cold tub). The model evaluates
-            # those contents; only explicit accessory/service product subjects
-            # are demoted here, alongside excluded category/facet links.
-            if product_path and not re.search(r"\b(?:accessor\w*|parts?|replacements?|filters?|covers?|services?)\b", exclusion, re.I):
-                continue
             excluded = _product_terms(exclusion)
-            # Preserve an explicitly requested single accessory category. Mentions
-            # in a multi-category brief do not cancel structured exclusions.
-            primary_accessory = (not re.search(r"[,;]|\b(?:and|or)\b", positive_product, re.I)
-                and re.search(r"\b" + re.escape(exclusion) + r"\s*$", positive_product, re.I))
-            if excluded and not primary_accessory and any(excluded <= subject for subject in subject_terms):
-                tier += 4
+            # A mixed-category item remains a lead when its excluded category is
+            # uncertain. An explicitly requested category cannot bypass the same
+            # category's structured exclusion.
+            accessory_exclusion = re.search(r"\b(?:accessor\w*|parts?|replacements?|filters?|covers?|services?)\b", exclusion, re.I)
+            if product_path and not accessory_exclusion and not excluded <= _product_terms(positive_product):
+                continue
+            if excluded and any(excluded <= subject for subject in subject_terms):
+                excluded_subject = True
                 break
         if re.search(r"complete|system", product, re.I) and re.search(r"cold|plunge", product, re.I):
             # "All-in-one plunge filter" names an accessory, even with system keywords.
@@ -177,7 +174,8 @@ def _page_priority(url, product, label="", *, excluded_products=None, trade_poli
                 tier += 4
             elif complete:
                 tier = min(tier - 1, -1)
-        return (2, tier, -hits)
+        # Exclusion precedence is independent of relevance and bundle boosts.
+        return (2, int(excluded_subject), tier, -hits)
     if re.search(r"dealer|wholesale", path):
         return (3, 0)
     return None

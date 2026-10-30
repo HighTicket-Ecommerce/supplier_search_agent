@@ -64,12 +64,16 @@ class DistributorCollectionTests(unittest.TestCase):
             "Fire Magic gas grill accessories", excluded_products=exclusions)
         self.assertLess(complete, parts)
 
-    def test_explicit_accessory_brief_can_still_find_accessories(self):
+    def test_exclusions_override_an_explicit_accessory_brief(self):
         product = "Fire Magic replacement parts"
         parts = web_fetcher._page_priority("https://example.com/products/fire-magic-replacement-parts", product,
             "Fire Magic replacement parts", excluded_products=["replacement parts"])
         grills = web_fetcher._page_priority("https://example.com/products/fire-magic-gas-grills", product)
-        self.assertLess(parts, grills)
+        self.assertGreater(parts, grills)
+        # The same accessory request remains valid without an explicit exclusion.
+        allowed_parts = web_fetcher._page_priority("https://example.com/products/fire-magic-replacement-parts", product,
+            "Fire Magic replacement parts")
+        self.assertLess(allowed_parts, grills)
 
     def test_category_exclusion_does_not_bury_a_dual_purpose_product(self):
         product = "Complete cold plunge systems"

@@ -70,3 +70,40 @@ class NavigationFollowupTests(unittest.TestCase):
         wanted=web_fetcher._page_priority('https://example.com/collections/gas-grills',product,excluded_products=['replacement filters'])
         excluded=web_fetcher._page_priority('https://example.com/products/replacement-filters',product,excluded_products=['replacement filters'])
         self.assertLess(wanted,excluded)
+
+    def test_explicit_exclusions_win_for_requested_categories_and_bundles(self):
+        cases = [
+            ("Fire Magic replacement parts", "replacement parts", "/products/fire-magic-replacement-parts"),
+            ("Cold plunge replacement filters", "filters", "/products/cold-plunge-replacement-filters"),
+            ("Cold plunge accessories", "accessories", "/products/cold-plunge-accessories"),
+            ("Gas grills", "gas grills", "/products/gas-grills"),
+            ("Complete cold plunge systems", "cold plunge systems", "/products/cold-plunge-complete-system"),
+        ]
+        for product, exclusion, path in cases:
+            with self.subTest(product=product):
+                url = "https://example.com" + path
+                denied = web_fetcher._page_priority(url, product, excluded_products=[exclusion])
+                allowed = web_fetcher._page_priority(url, product)
+                alternative = web_fetcher._page_priority("https://example.com/collections/all", product,
+                                                         excluded_products=[exclusion])
+                self.assertGreater(denied, allowed)
+                self.assertGreater(denied, alternative)
+
+    def test_excluded_requested_pages_do_not_consume_the_evidence_budget(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"SUPPLIER_JOB_DB": str(Path(tmp)/"jobs.sqlite")}):
+            request = ResearchRequest(product="Fire Magic replacement parts", excluded_products=["replacement parts"],
+                                      max_pages_per_supplier=3)
+            job_store.init_job("excluded-route", request.model_dump())
+            context = ResearchContext("excluded-route", request)
+            calls = []
+            def fetch(url, ctx, **kwargs):
+                ctx.take_page(); calls.append(url)
+                text = ("[About](/about) [Replacement parts](/products/fire-magic-replacement-parts) "
+                        "[Other products](/collections/all)") if len(calls) == 1 else "Captured company or product evidence"
+                return {"url": url, "text": text}
+            with patch.object(web_fetcher, "fetch_page", side_effect=fetch):
+                web_fetcher.fetch_website_pages("https://example.com", context)
+            self.assertEqual(context.pages, 3)
+            self.assertIn("https://example.com/about", calls)
+            self.assertIn("https://example.com/collections/all", calls)
+            self.assertNotIn("https://example.com/products/fire-magic-replacement-parts", calls)
