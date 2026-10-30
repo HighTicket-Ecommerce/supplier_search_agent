@@ -12,7 +12,7 @@ _CUES = re.compile(r"\b(?:manufactur\w*|produc(?:e|es|ed|tion|ing)|build\w*|buil
                    r"brands?|own\w*|creates?|make|distribut\w*|wholesal\w*|retail\w*|resell\w*|suppl\w*|"
                    r"marketplace|publish\w*|reviews?|blog|media)\b", re.I)
 _GOODS = re.compile(r"\b(?:products?|goods|equipment|systems?|heaters?|saunas?|tubs?|plunges?|chillers?|"
-                    r"grills?|devices?|furniture|appliances?|components?)\b", re.I)
+                    r"grills?|devices?|furniture|appliances?|components?|bicycles?|(?:e[ -]|cargo |road )?bikes?|kayaks?)\b", re.I)
 _UNSUPPORTED = re.compile(r"\b(?:not|never|no longer|don't|doesn't|didn't|isn't|aren't|cannot|can't|won't|haven't|hasn't|previously|formerly|used to|plan to|planning to|"
                           r"hope to|aim to|want to|will|would|could|might|should)\b", re.I)
 _OTHER_SPEAKER = re.compile(r"\b(?:customer reviews?|testimonials?|our (?:dealer|supplier|partner)s? (?:says?|states?)|"
@@ -38,6 +38,7 @@ def _subjects(company):
 
 
 def _has_goods(text, product=""):
+    text = re.sub(r"^\s*to order\s+", "", text, flags=re.I)
     primary = re.split(r"\b(?:for|that|which|with|to)\b", text, maxsplit=1, flags=re.I)[0]
     if re.search(r"\b(?:services?|websites?|software|consulting|relationships?|experiences?|content|trust|tours?|trails?|tracks?|workshops?|films?|events?|communities|community)\b", primary, re.I):
         return False

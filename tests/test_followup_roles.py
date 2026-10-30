@@ -57,3 +57,11 @@ class RoleFollowupTests(unittest.TestCase):
                 status,recovery=self.check(text)
                 self.assertEqual(status,'supported' if text in positives else 'not_established')
                 self.assertEqual(bool(recovery),text in positives)
+
+    def test_physical_product_families_and_build_to_order(self):
+        for text, product in [('We manufacture bicycles in Taiwan','Road bikes'),
+                              ('We manufacture e-bikes and cargo bikes','bicycles'),
+                              ('We build to order custom kayaks','kayaks')]:
+            with self.subTest(text=text):
+                status,recovery=self.check(text,product=product)
+                self.assertEqual(status,'supported'); self.assertTrue(recovery)
