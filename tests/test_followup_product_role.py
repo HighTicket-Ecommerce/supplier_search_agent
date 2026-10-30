@@ -24,3 +24,14 @@ class ProductRoleFollowupTests(unittest.TestCase):
                      'We manufacture saunas and are authorized dealers of Acme cold plunges',
                      'Example is a manufacturer of saunas and an authorized dealer of Acme cold plunges']:
             with self.subTest(text=text): self.assertEqual(self.check(text),'not_established')
+
+    def test_self_manufacturer_descriptions_can_put_category_before_the_role(self):
+        for text in ['Example is a leading cold plunge manufacturer',
+                     "Example is Canada's premier cold plunge manufacturer",
+                     'Example, a Canadian manufacturer of cold plunges, builds every tub by hand',
+                     'Example, the leading manufacturer of cold plunges in Canada, ships worldwide']:
+            with self.subTest(text=text): self.assertEqual(self.check(text),'supported')
+        for text in ['The manufacturer of our cold plunges is Acme.',
+                     'A leading manufacturer of cold plunges supplies our tubs.',
+                     'Acme is a leading cold plunge manufacturer']:
+            with self.subTest(text=text): self.assertEqual(self.check(text),'not_established')

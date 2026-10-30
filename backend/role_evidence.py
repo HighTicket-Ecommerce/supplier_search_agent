@@ -72,6 +72,18 @@ def _passages(quote, source):
             yield block[start:end], heading
 
 
+def _manufacturer_description(clause, company):
+    actor, named = _subjects(company)
+    # A copula/appositive attaches the role noun to the named company. Reject
+    # embedded relationships (dealer of a manufacturer, products from one).
+    pattern = (r"(?:" + actor + r"(?:\s+(?:is|are)|'re)\s+|" + named + r",\s*)"
+               r"(?P<description>[^.!?;,:]{0,100}?)\bmanufacturer\b(?!'s)")
+    match = re.search(pattern, clause, re.I)
+    if match and not re.search(r"\b(?:of|from|for|dealer|retailer|supplier|representative|agent|stock|stocks)\b", match['description'], re.I):
+        return match
+    return None
+
+
 def manufacturer_label(clause, company, heading="", product=""):
     actor, named = _subjects(company)
     # A label's value must identify this company. Under a company heading a
@@ -80,7 +92,7 @@ def manufacturer_label(clause, company, heading="", product=""):
     tagline = re.fullmatch(
         r"(?:(?:a|an|the|trusted|leading|professional|independent|Canadian|American)\s+){0,8}"
         r"manufacturer(?:\s+(?:of|since)\s+[^.!?]+)?[.!]?", clause, re.I)
-    label = (_self_role(clause, actor, "manufacturer(?!'s)") or direct_label or
+    label = (_manufacturer_description(clause, company) or _self_role(clause, actor, "manufacturer(?!'s)") or direct_label or
              re.search(named + r",\s*(?:as\s+)?an?\s+manufacturer\b", clause, re.I) or
              (re.search(named, heading, re.I) and len(clause) < 160 and tagline and not re.search(r"\b(?:is|are|supplies|stocks|sells|provides)\b", clause, re.I)))
     title = re.match(named + r"\s+([^.!?;:,]{0,70})\bmanufacturer\b", clause, re.I)
@@ -150,6 +162,9 @@ def role_object_spans(role, company, clause, heading=""):
     spans = [re.split(r"[.!?;]", clause[match.end():], maxsplit=1)[0].strip()
              for match in re.finditer(actor + modifiers + r"(?:" + verbs + r")\b", clause, re.I)]
     if role == "Manufacturer":
+        description = _manufacturer_description(clause, company)
+        if description:
+            spans.append(description['description'])
         if manufacturer_label(clause, company, heading):
             spans.extend(match[1] for match in re.finditer(r"\bmanufacturer\s+of\s+([^.!?;]+)", clause, re.I))
         if _self_role(clause, actor, "manufacturer"):
