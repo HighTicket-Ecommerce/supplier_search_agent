@@ -21,7 +21,7 @@ _CONTRACT = re.compile(r"\b(?:for (?:other|third[ -]party) (?:brands?|companies)
                        r"design services|private[ -]label|OEM)\b", re.I)
 _THIRD_PARTY = re.compile(r"\b(?:third[ -]party|other brands?|brands? (?:from|by))\b", re.I)
 _B2B = re.compile(r"\b(?:wholesale|B2B|to (?:our )?(?:dealers|retailers|trade customers|businesses))\b", re.I)
-_NON_GOODS_OBJECT = re.compile(r"\b(?:builds?|designs?|crafts?)\s+(?:(?:our|own|a|an|strong|lasting|better)\s+){0,3}"
+_NON_GOODS_OBJECT = re.compile(r"\b(?:manufactur(?:e|es)|produc(?:e|es)|builds?|designs?|crafts?|creates?|engineers?)\s+(?:(?:our|own|a|an|strong|lasting|better)\s+){0,3}"
                                r"(?:relationships?|partnerships?|trust|brands?|communities|community|websites?|experiences?|reputation)\b", re.I)
 _OUR_BRAND = re.compile(r"\bour (?:own )?brand\b(?!\s+(?:partners?|suppliers?|customers?|dealers?|directory|ambassadors?)\b)", re.I)
 
@@ -37,9 +37,21 @@ def _subjects(company):
     return r"(?:\bwe\b|" + named + r")", named
 
 
-def _action(text, actor, verb, *, physical_object=False):
+def _has_goods(text, product=""):
+    primary = re.split(r"\b(?:for|that|which|with|to)\b", text, maxsplit=1, flags=re.I)[0]
+    if re.search(r"\b(?:services?|websites?|software|consulting|relationships?|experiences?|content|trust)\b", primary, re.I):
+        return False
+    if _GOODS.search(primary):
+        return True
+    brief = re.split(r"\b(?:no|not|excluding|without)\b", product, maxsplit=1, flags=re.I)[0]
+    terms = {t.rstrip("s") for t in re.findall(r"\w+", brief.casefold()) if len(t) > 3}
+    terms -= {"complete", "premium", "quality", "outdoor", "indoor", "high", "electric", "supplier", "search", "with", "from"}
+    return bool(terms & {t.rstrip("s") for t in re.findall(r"\w+", primary.casefold())})
+
+
+def _action(text, actor, verb, *, physical_object=False, product=""):
     matches = re.finditer(actor + r"\s+(?:(?:also|proudly|personally|directly|locally)\s+){0,3}(?:" + verb + r")\b", text, re.I)
-    return any(not physical_object or _GOODS.search(text[match.end():]) for match in matches)
+    return any(not physical_object or _has_goods(text[match.end():], product) for match in matches)
 
 
 def _self_role(text, actor, role):
@@ -59,34 +71,41 @@ def _passages(quote, source):
             yield block[start:end], heading
 
 
-def _supported_roles(quote, clause, heading, company):
+def manufacturer_label(clause, company, heading="", product=""):
+    actor, named = _subjects(company)
+    label = (_self_role(clause, actor, "manufacturer") or
+             re.search(named + r",\s*(?:as\s+)?an?\s+manufacturer\b", clause, re.I) or
+             (re.search(named, heading, re.I) and len(clause) < 160 and
+              re.match(r"(?:(?:a|an|the|trusted|leading|professional|independent|Canadian|American)\s+){0,8}manufacturer\b", clause, re.I)))
+    title = re.match(named + r"\s+([^.!?;:,]{0,70})\bmanufacturer\b", clause, re.I)
+    if title and _has_goods(clause, product) and not re.search(r"\b(?:sells?|supply|supplies|distributes?|retails?|resells?|from|for|with|by|partners?)\b", title[1], re.I):
+        label = True
+    return bool(label)
+
+
+def _supported_roles(quote, clause, heading, company, product=""):
     if not _CUES.search(quote):
         return set(), "quote_does_not_assert_a_company_role"
-    if _UNSUPPORTED.search(clause):
+    assertion = re.split(r"\b(?:that|which)\b", clause, maxsplit=1, flags=re.I)[0]
+    if _UNSUPPORTED.search(assertion):
         return set(), "negated_historical_or_hypothetical_role"
     if _OTHER_SPEAKER.search(heading + " " + clause):
         return set(), "role_attributed_to_other_speaker"
     actor, named = _subjects(company)
     roles = set()
-    goods = bool(_GOODS.search(clause))
+    goods = _has_goods(clause, product)
     production = r"(?:designs?\s+(?:and|&)\s+)?(?:manufactur(?:e|es)|produc(?:e|es)|builds?|handbuilds?)"
-    maker = _action(clause, actor, production, physical_object=True) and not _NON_GOODS_OBJECT.search(clause)
+    maker = _action(clause, actor, production, physical_object=True, product=product) and not _NON_GOODS_OBJECT.search(clause)
     own_facility = bool(re.search(r"\b(?:manufactured|produced|built)\b.{0,25}\bin our\b.{0,35}\b(?:facility|factory|workshop)\b", clause, re.I)) and goods
     # An explicit self-description may sit immediately below the company's heading.
-    maker_label = (_self_role(clause, actor, "manufacturer") or
-                   re.search(named + r",\s*(?:as\s+)?an?\s+manufacturer\b", clause, re.I) or
-                   (re.search(named, heading, re.I) and len(clause) < 160 and
-                    re.search(r"\b(?:trusted|leading|professional)\b.{0,45}\bmanufacturer\b", clause, re.I)))
-    title = re.match(named + r"\s+([^.!?;:,]{0,70})\bmanufacturer\b", clause, re.I)
-    if title and goods and not re.search(r"\b(?:sells?|supply|supplies|distributes?|retails?|resells?|from|for|with|by|partners?)\b", title[1], re.I):
-        maker_label = True
+    maker_label = manufacturer_label(clause, company, heading, product)
     maker_service = re.search(r"\bmanufacturer(?:'s)?\s+(?:representative|rep|agent|directory|dealer)\b", clause, re.I)
     if re.search(r"\b(?:manufactur\w*|produc\w*|build\w*|built|handbuilt)\b", quote, re.I) and (maker or own_facility or maker_label) and not maker_service:
         roles.add("Manufacturer")
     explicit_brand = (_self_role(clause, actor, "brand(?: owner)?") or
                       bool(_OUR_BRAND.search(clause)) or
                       _action(clause, actor, r"owns?\s+(?:the\s+)?[^.!?;]{0,50}\bbrand"))
-    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?", physical_object=True) or
+    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?", physical_object=True, product=product) or
                    re.search(r"\bevery product we (?:make|create)\b", clause, re.I)) and goods and
                   not _CONTRACT.search(clause) and not _NON_GOODS_OBJECT.search(clause))
     own_line = maker and bool(re.search(r"\bour (?:own )?(?:products?|line|brand)\b", clause, re.I))
@@ -108,7 +127,7 @@ def _supported_roles(quote, clause, heading, company):
     return roles, "specific_role_not_supported"
 
 
-def verify_supplier_role(role, company, evidence, pages):
+def verify_supplier_role(role, company, evidence, pages, product=""):
     result = {"status": "not_established", "claimed_role": role, "supported_roles": [],
               "supporting_evidence": [], "observations": []}
     supported = set()
@@ -122,7 +141,7 @@ def verify_supplier_role(role, company, evidence, pages):
                 continue
             for clause, heading in _passages(quote, page["text"]):
                 found = True
-                roles, reason = _supported_roles(quote, clause, heading, company)
+                roles, reason = _supported_roles(quote, clause, heading, company, product)
                 supported.update(roles)
                 observation = {"source_url": entry["source_url"], "quote": entry["quote"],
                                "supported_roles": sorted(roles), "reason": "specific_role_supported" if role in roles else reason,
@@ -139,7 +158,7 @@ def verify_supplier_role(role, company, evidence, pages):
     return result
 
 
-def recover_role_evidence(role, company, pages):
+def recover_role_evidence(role, company, pages, product=""):
     """Recover at most two literal role quotes from already captured pages.
 
     Only the exact proposed role is eligible; no model calls or reclassification.
@@ -161,15 +180,15 @@ def recover_role_evidence(role, company, pages):
                 words = clause.split()
                 candidates = [" ".join(words[start:start+12]) for start in range(min(96-scanned, max(1, len(words)-11)))]
                 candidates = [q for q in candidates if _CUES.search(q)]
-                candidates.sort(key=lambda q: (role not in _supported_roles(q, q, "", company)[0],
+                candidates.sort(key=lambda q: (role not in _supported_roles(q, q, "", company, product)[0],
                                                not bool(re.match(actor + r"|our\b|every\b", q, re.I))))
                 for quote in candidates:
                     scanned += 1
-                    roles, _ = _supported_roles(quote, clause, heading, company)
+                    roles, _ = _supported_roles(quote, clause, heading, company, product)
                     if role in roles:
                         entry = {"claim": "role", "source_url": page["url"], "quote": quote,
                                  "evidence_origin": "captured_source_role_repair"}
-                        if verify_supplier_role(role, company, [entry], [page])["status"] == "supported":
+                        if verify_supplier_role(role, company, [entry], [page], product)["status"] == "supported":
                             recovered.append(entry)
                             page_recovered = True
                             break

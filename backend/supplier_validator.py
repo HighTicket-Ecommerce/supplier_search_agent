@@ -182,13 +182,13 @@ def process_supplier(product, url, context, brand_hint=None, discovery_source=No
     result["phone"] = next((c["value"] for c in result["contacts"] if c["kind"] == "phone"), None)
     if not valid:
         return finish("review", "source_quote_not_verified")
-    role = verify_supplier_role(analysis["supplier_type"], result["supplier_name"], evidence, pages)
+    role = verify_supplier_role(analysis["supplier_type"], result["supplier_name"], evidence, pages, product)
     model_role_status = role["status"]
     if model_role_status != "supported" and analysis["supplier_type"] != "Unknown":
-        recovered = recover_role_evidence(analysis["supplier_type"], result["supplier_name"], pages)
+        recovered = recover_role_evidence(analysis["supplier_type"], result["supplier_name"], pages, product)
         evidence.extend(recovered)
         if recovered:
-            role = verify_supplier_role(analysis["supplier_type"], result["supplier_name"], evidence, pages)
+            role = verify_supplier_role(analysis["supplier_type"], result["supplier_name"], evidence, pages, product)
     role["model_evidence_status"] = model_role_status
     role["source_repair_used"] = model_role_status != "supported" and role["status"] == "supported"
     result["role_verification"] = role
