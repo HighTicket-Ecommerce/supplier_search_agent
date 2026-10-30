@@ -1,5 +1,7 @@
 # Complete development rerun — 2026-10-27
 
+Later targeted fix: [accessory-page selection](product-page-selection-results.md) makes Penguin qualify from its complete-system collection, with Redwood still qualified as a control. The counts below preserve this earlier 16-case run on `480d5b6`; they are not a rerun of the newer version.
+
 **Improved, but not ready to pass the benchmark.** All 16 development/anchor cases were rerun on the same fixed application version. The agent returned **4 qualified, 11 review, 1 retry needed, and 0 excluded**. Qualification coverage against the six frozen expected-qualified labels rose from **1/6 to 4/6 (67%)**, below the 80% target. BlueCube also needs manual headquarters review: its contact/workshop address passes the implemented gate but does not explicitly establish headquarters or an office.
 
 This report supersedes the earlier targeted checks for the current development-cohort result. It does not establish discovery performance or production accuracy.

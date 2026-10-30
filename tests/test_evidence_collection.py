@@ -144,6 +144,69 @@ class EvidenceCollectionTests(unittest.TestCase):
         self.assertLess(bundle, mat)
         self.assertIsNotNone(web_fetcher._page_priority("https://example.com/products/best-cold-plunge-chiller", "Cold plunge chillers"))
 
+    def test_penguin_navigation_chooses_collection_instead_of_all_in_one_filter(self):
+        context = self.context(max_pages_per_supplier=3, max_pages=3)
+        home = {"url": "https://penguinchillers.com/", "text": "Cold therapy equipment", "links": [
+            {"url": "https://penguinchillers.com/pages/contact", "label": "Contact Us"},
+            {"url": "https://penguinchillers.com/products/all-in-one-cold-plunge-filter", "label": "View Product"},
+            {"url": "https://penguinchillers.com/collections/cold-therapy", "label": "Cold Therapy"},
+            {"url": "https://penguinchillers.com/products/cold-therapy-filter-replacements", "label": "View Product"},
+            {"url": "https://penguinchillers.com/products/1-hp-water-chiller", "label": "View Product"}]}
+        contact = {"url": home["links"][0]["url"], "text": "Our office address is 10315 Cogdill Rd, Knoxville, TN."}
+        collection_url = "https://penguinchillers.com/collections/cold-therapy"
+        def fetch(url, ctx, **kwargs):
+            ctx.take_page()
+            # The unfetched collection body is deliberately unavailable in this routing test.
+            return {home["url"]: home, contact["url"]: contact}.get(url)
+        with patch.object(web_fetcher, "fetch_page", side_effect=fetch) as fetch:
+            pages = web_fetcher.fetch_website_pages(home["url"], context)
+        self.assertEqual([call.args[0] for call in fetch.call_args_list], [home["url"], contact["url"], collection_url])
+        self.assertEqual(context.pages, 3)
+        self.assertEqual(len(pages), 2)
+
+    def test_accessories_do_not_inherit_complete_system_priority_from_their_names(self):
+        product = "Complete cold plunge systems"
+        collection = web_fetcher._page_priority("https://example.com/collections/cold-therapy", product, "Cold Therapy")
+        for slug, label in [
+            ("all-in-one-cold-plunge-filter", "View Product"),
+            ("integrated-cold-plunge-cover", "View Product"),
+            ("cold-plunge-filter-bundle", "View Product"),
+            ("12345", "Replacement filters for the all-in-one cold plunge"),
+            ("cold-plunge-system-accessories", "Complete plunge system accessories"),
+        ]:
+            with self.subTest(slug=slug, label=label):
+                rank = web_fetcher._page_priority("https://example.com/products/" + slug, product, label)
+                self.assertLess(collection, rank)
+
+    def test_complete_tub_with_included_accessories_keeps_product_priority(self):
+        product = "Complete cold plunge systems"
+        collection = web_fetcher._page_priority("https://example.com/collections/cold-plunges", product)
+        for slug, label in [
+            ("cold-plunge-tub-bundle-with-filter-and-cover", "Cold plunge tub bundle with filter and cover"),
+            ("cold-plunge-with-integrated-filtration", "Cold plunge with integrated filtration"),
+            ("c1", "All-in-one cold plunge with filter and cover"),
+        ]:
+            with self.subTest(slug=slug):
+                rank = web_fetcher._page_priority("https://example.com/products/" + slug, product, label)
+                self.assertLess(rank, collection)
+
+    def test_specific_filter_brief_can_still_choose_a_filter(self):
+        home = {"url": "https://example.com/", "text": "Cold therapy", "links": [
+            {"url": "https://example.com/collections/cold-therapy", "label": "Cold Therapy"},
+            {"url": "https://example.com/products/all-in-one-cold-plunge-filter", "label": "Replacement filter"}]}
+        filter_page = {"url": home["links"][1]["url"], "text": "Replacement filters"}
+        def fetch(url, ctx, **kwargs):
+            ctx.take_page()
+            return {home["url"]: home, filter_page["url"]: filter_page}[url]
+        for product in ["Cold plunge replacement filters", "Complete cold plunge filter systems"]:
+            with self.subTest(product=product):
+                context = self.context(name=product, max_pages_per_supplier=2, max_pages=2, allowed_countries=[])
+                context.request.product = product
+                with patch.object(web_fetcher, "fetch_page", side_effect=fetch) as call:
+                    web_fetcher.fetch_website_pages(home["url"], context)
+                self.assertEqual(call.call_args_list[1].args[0], filter_page["url"])
+                self.assertEqual(context.pages, 2)
+
     def test_visible_text_quotes_and_observed_links_are_preserved_separately(self):
         context = self.context()
         html = '<main><p>Our system includes a <strong>tub</strong> and chiller.</p><a href="/products/plunge">Plunge system</a></main>'

@@ -2,7 +2,7 @@ import hashlib
 from html.parser import HTMLParser
 import re
 import time
-from urllib.parse import urljoin, urlsplit, urldefrag
+from urllib.parse import urljoin, urlsplit, urldefrag, unquote
 
 from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
@@ -10,6 +10,7 @@ from backend.filters import is_blocked_domain
 from backend.location_evidence import has_company_location
 from backend.utils import domain_from_url, normalize_url, is_search_destination
 from backend.research_context import JobStopped, LimitReached
+from backend.product_brief import positive_brief
 
 _CACHE = {}
 MAX_HTML_CHARS = 1_500_000
@@ -79,13 +80,18 @@ def _product_terms(product):
     return {t.rstrip("s") for t in re.findall(r"\w+", (product or "").casefold()) if len(t) > 3}
 
 
+def _positive_product_brief(product):
+    return positive_brief(product)
+
+
 def _page_priority(url, product, label=""):
     path = urlsplit(url).path.casefold()
     if re.search(r"\.(?:jpe?g|png|webp|gif|svg|ico|css|js|json|pdf|zip|mp4|woff2?)$", path) or re.search(r"/(?:cdn|assets)/", path):
         return None
     if re.search(r"privacy|terms|checkout|cart|login|account|shipping|refund|returns|blog|news", path):
         return None
-    terms = _product_terms(product) - {"complete", "system", "supplier", "product", "primary"}
+    positive_product = _positive_product_brief(product)
+    terms = _product_terms(positive_product) - {"complete", "system", "supplier", "product", "primary"}
     if re.search(r"about|company|our-story|who-we-are|our-team|mission", path) or re.search(
             r"^(?:about\b|our (?:story|company|team)\b|who we are\b)", label.casefold()):
         return (0, 0)
@@ -103,12 +109,30 @@ def _page_priority(url, product, label=""):
         if not product_path and not collection_path:
             tier = 2
         if re.search(r"complete|system", product, re.I) and re.search(r"cold|plunge", product, re.I):
-            component = re.search(r"chiller|tubs?-only|accessor|filters?|covers?|dry-mat|chemical|cleaner|hoses?|steps", path)
-            complete = re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
-            if component and not complete:
+            # "All-in-one plunge filter" names an accessory, even with system keywords.
+            # Inspect the item slug/label, not a parent collection or included extras.
+            names = [re.sub(r"[-_]+", " ", unquote(name).casefold())
+                     for name in (positive_product, path.rstrip("/").rsplit("/", 1)[-1], label)]
+            heads = [re.split(r"\b(?:with|including|includes?|for|compatible with|suitable for)\b", name, maxsplit=1)[0] for name in names]
+            accessory_pattern = r"\b(?:accessor(?:y|ies)|filters?|covers?|(?:dry )?mats?|chemicals?|cleaners?|hoses?|steps?)\b"
+            def complete_configuration(name):
+                marker = re.search(r"\b(?:bundle|package|combo|system|kit)\b", name)
+                if not marker:
+                    return False
+                subject = name[:marker.start()]
+                if re.search(accessory_pattern, subject):
+                    return False
+                pair = re.search(r"\b(?:tub|plunge|ice bath)\b", subject) and re.search(r"\bchiller\b", subject)
+                primary = re.search(r"\b(?:plunge|ice bath)\b", subject) and re.search(r"\b(?:complete|integrated|all in one)\b", subject)
+                return bool(pair or primary)
+            accessory = not re.search(accessory_pattern, heads[0]) and any(
+                re.search(accessory_pattern, name) and not complete_configuration(name) for name in heads[1:])
+            component = re.search(r"chiller|tubs?-only", path)
+            complete = any(complete_configuration(name) for name in heads[1:]) or re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
+            if accessory or (component and not complete):
                 tier += 4
-            if complete and hits:
-                tier -= 1
+            elif complete:
+                tier = min(tier - 1, -1)
         return (2, tier, -hits)
     if re.search(r"dealer|wholesale", path):
         return (3, 0)
