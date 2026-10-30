@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
+from backend.benchmark_metadata import git_commit
+
 RAW_FIXTURE = ROOT / "tests/fixtures/raw_fetch_timeout.json"
 
 
@@ -34,7 +36,7 @@ def run_probe(url, output, raw, *, browser_items=None):
     manifest = {"started_at": time.time(), "mode": mode, "settings": request.model_dump(),
         "model_settings": model_settings_snapshot(), "qualification_not_run": True, "sheets_writes": 0,
         "raw_replay_sha256": hashlib.sha256(json.dumps(raw, sort_keys=True).encode()).hexdigest(),
-        "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "code_commit": git_commit(ROOT),
         "helper_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     (output/"manifest.json").write_text(json.dumps(manifest, indent=2))
     attempts = []
