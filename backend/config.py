@@ -28,9 +28,18 @@ OPENAI_OUTPUT_USD_PER_MILLION = env_float("OPENAI_OUTPUT_USD_PER_MILLION", _know
 
 def model_settings_snapshot():
     """Non-secret effective model settings for reproducible preview manifests."""
+    from urllib.parse import urlsplit, urlunsplit
+    from backend.model_client import client
+    parsed = urlsplit(str(client.base_url))
+    host = parsed.hostname or ""
+    if ":" in host:
+        host = "[" + host + "]"
+    if parsed.port:
+        host += ":" + str(parsed.port)
+    base_url = urlunsplit((parsed.scheme, host, parsed.path, "", ""))
     return {"model": OPENAI_MODEL, "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
             "input_usd_per_million": OPENAI_INPUT_USD_PER_MILLION,
-            "output_usd_per_million": OPENAI_OUTPUT_USD_PER_MILLION}
+            "output_usd_per_million": OPENAI_OUTPUT_USD_PER_MILLION, "base_url": base_url}
 
 NO_TEMPERATURE_MODELS = {
     "gpt-5",

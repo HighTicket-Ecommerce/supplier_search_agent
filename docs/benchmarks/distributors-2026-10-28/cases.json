@@ -1,0 +1,32 @@
+{
+  "id": "distributors-2026-10-28",
+  "reviewed_at": "2026-10-28",
+  "group": "exploratory_development",
+  "product": "Fire Magic outdoor gas grills (complete gas grills, excluding accessories, replacement parts, charcoal grills and electric grills)",
+  "cases": [
+    {
+      "id": "rutherford-fire-magic",
+      "company": "Rutherford Equipment",
+      "url": "https://www.rutherfordequipment.com/brandsupplier/fire-magic",
+      "brand": "Fire Magic",
+      "expected_relationship": "supplier_reported_brand_catalogue; brand_authorization_not_established",
+      "expected_status": "review_unless_collected_evidence_supports_all_application_gates",
+      "pre_run_sources": [
+        {"url": "https://www.rutherfordequipment.com/account/login", "observation": "Public registration text explicitly states wholesale distributor only, no general-public sales."},
+        {"url": "https://www.rutherfordequipment.com/brandsupplier/fire-magic", "observation": "Fire Magic brand catalogue with product listings and a Gas Grills category. It also contains accessories and charcoal grills; do not infer exact gas-grill fit from every listing."},
+        {"url": "https://www.rutherfordequipment.com/static/about-us", "observation": "Explicit headquarters in Covington, Georgia; also describes supplying dealers."}
+      ]
+    },
+    {
+      "id": "gas-equipment-fire-magic",
+      "company": "Gas Equipment Distributors",
+      "url": "https://gasequipmentdistributors.com/",
+      "brand": "Fire Magic",
+      "expected_relationship": "supplier_reported_brand_range; brand_authorization_not_established",
+      "expected_status": "review_unless_collected_evidence_supports_all_application_gates",
+      "pre_run_sources": [
+        {"url": "https://gasequipmentdistributors.com/", "observation": "Fire Magic is listed in the grill range, with a Fire Magic price-list download and an explicit wholesale-trade-only policy. The address is not explicitly labelled HQ or office; no exact gas-grill SKU was checked before the run."}
+      ]
+    }
+  ]
+}

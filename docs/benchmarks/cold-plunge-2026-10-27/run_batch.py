@@ -16,6 +16,7 @@ from backend.job_store import get_job, init_job
 from backend.master_index import load_reference
 from backend.models import ResearchRequest
 from backend.research_runner import run_research_job
+from backend.config import model_settings_snapshot
 
 LABELS = json.loads((Path(__file__).with_name("labels.json")).read_text())
 
@@ -64,6 +65,7 @@ def run(ids, *, master_reference_id):
         "elapsed_seconds": round(time.time() - started, 1),
         "case_ids": ids,
         "settings": request.model_dump(),
+        "model_settings": model_settings_snapshot(),
         "status": job["status"],
         "limit_reason": job.get("limit_reason"),
         "error": job.get("error"),
