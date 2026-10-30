@@ -24,6 +24,12 @@ def run_research_job(job_id, req):
     master = None
 
     def save(**extra):
+        if extra.get("status") in {"completed", "failed", "stopped", "limited"}:
+            reason = extra.get("limit_reason") or extra["status"]
+            if extra["status"] == "completed":
+                reason = ("target_reached" if len(accepted) >= req.target_suppliers else
+                          "candidate_limit" if processed >= req.max_candidate_domains else "pool_exhausted")
+            context.finish_discovery(reason)
         update_job(job_id, accepted=accepted, review=review, rejected=rejected, skipped=skipped,
                    processed=processed, total=max(len(seen), len(observations)), target_suppliers=req.target_suppliers,
                    observations=observations, directory_coverage=coverage, warnings=warnings,
@@ -39,6 +45,11 @@ def run_research_job(job_id, req):
 
     def enough():
         return len(accepted) >= req.target_suppliers or processed >= req.max_candidate_domains
+
+    def identity_seen(hint):
+        hint = (hint or "").strip().casefold()
+        retryable = {domain for domain in retryable_identities if (domain, hint) not in identity_attempts}
+        return (seen - retryable) | resolved
 
     def process(candidates):
         nonlocal processed
@@ -63,6 +74,7 @@ def run_research_job(job_id, req):
             seen.add(domain)
             identity_attempts.add(identity_key)
             save()
+            context.record_discovery_verification(item, "checking")
             try:
                 supplier = process_supplier(req.product, url, context,
                                             brand_hint=item.get("brand_name"), discovery_source=item.get("discovery_source"),
@@ -78,6 +90,8 @@ def run_research_job(job_id, req):
                     retryable_identities.add(domain)
                 else:
                     retryable_identities.discard(domain)
+                    if final_domain:
+                        seen.add(final_domain)
                 if final_domain and supplier["status"] == "qualified":
                     resolved.add(final_domain)
                 if supplier["status"] == "qualified":
@@ -86,13 +100,17 @@ def run_research_job(job_id, req):
                     rejected.append(supplier)
                 else:
                     review.append(supplier)
+                context.record_discovery_verification(item, supplier["status"])
             except (JobStopped, LimitReached) as exc:
                 review.append({"url": url, "status": "retry_needed", "reason": "verification_interrupted:" + str(exc),
                                "discovery": {k: v for k, v in item.items() if k != "url"}})
                 save()
+                context.record_discovery_verification(item, "interrupted")
                 raise
             except Exception as exc:
-                review.append({"url": url, "status": "retry_needed", "reason": "processing_failed:" + type(exc).__name__})
+                review.append({"url": url, "status": "retry_needed", "reason": "processing_failed:" + type(exc).__name__,
+                               "discovery": {k: v for k, v in item.items() if k != "url"}})
+                context.record_discovery_verification(item, "retry_needed")
             processed += 1
             save()
 
@@ -133,11 +151,12 @@ def run_research_job(job_id, req):
                         break
                     context.checkpoint()
                     candidates = run_serp_brand_lookup(row["supplier_name"], req.product, context,
-                        country=(req.allowed_countries or ["United States"])[0], limit=min(3, req.max_candidate_domains-processed))
+                        country=(req.allowed_countries or ["United States"])[0], limit=min(3, req.max_candidate_domains-processed),
+                        known_domains=master.by_domain if master else (), seen_domains=identity_seen(row["supplier_name"]))
                     for candidate in candidates:
                         candidate.update(brand_name=row["supplier_name"], discovery_source="distributor_identity_lookup",
                                          directory_observation_id=row["observation_id"], directory_source_url=row["source_url"])
-                    row["lookup_candidate_urls"] = [c["url"] for c in candidates]
+                    row["lookup_candidate_urls"] = [c["url"] for c in candidates if not c.get("skip_reason")]
                     process(candidates)
             save(status="completed" if observations else "failed", **({} if observations else {"error": "No directory observations could be extracted; see warnings"}))
             return
@@ -146,7 +165,8 @@ def run_research_job(job_id, req):
             for country in req.allowed_countries or ["United States"]:
                 if enough():
                     break
-                process(run_serp_discovery(req.product, context, country=country, limit=req.max_candidate_domains-processed))
+                process(run_serp_discovery(req.product, context, country=country, limit=req.max_candidate_domains-processed,
+                                          known_domains=master.by_domain if master else (), seen_domains=seen | resolved))
         if req.use_apify and req.use_shopping and not enough():
             for country in req.allowed_countries or ["United States"]:
                 if enough():
@@ -156,7 +176,9 @@ def run_research_job(job_id, req):
                 for item in country_observations:
                     if enough():
                         break
-                    candidates = run_serp_brand_lookup(item["lookup_hint"], req.product, context, country=country, limit=min(3,req.max_candidate_domains-processed))
+                    candidates = run_serp_brand_lookup(item["lookup_hint"], req.product, context, country=country,
+                        limit=min(3,req.max_candidate_domains-processed),
+                        known_domains=master.by_domain if master else (), seen_domains=identity_seen(item["lookup_hint"]))
                     for candidate in candidates:
                         candidate.update(brand_name=item["lookup_hint"], discovery_source="shopping_identity_lookup", shopping_observation=item)
                     process(candidates)

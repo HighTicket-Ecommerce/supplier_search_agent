@@ -24,7 +24,8 @@ def init_job(job_id, request=None):
     job = {"status": "queued", "accepted": [], "review": [], "rejected": [], "total": 0,
            "processed": 0, "error": None, "request": request or {}, "limits": {},
            "operations": [], "exports": {}, "observations": [], "directory_coverage": [],
-           "catalogues": {}, "warnings": [], "skipped": [], "master_reference": None, "created_at": time.time()}
+           "catalogues": {}, "warnings": [], "skipped": [], "master_reference": None,
+           "discovery_candidates": [], "discovery_coverage": [], "created_at": time.time()}
     with _connect() as db:
         db.execute("INSERT INTO jobs VALUES (?, ?, ?)", (job_id, json.dumps(job), time.time()))
 
@@ -53,8 +54,13 @@ def recover_interrupted_jobs():
     with _connect() as db:
         for job_id, data in db.execute("SELECT id, data FROM jobs").fetchall():
             job = json.loads(data)
-            if job["status"] in {"queued", "running"}:
-                job.update(status="interrupted", error="Backend restarted; saved partial results are available.")
+            if job["status"] in {"queued", "running", "stopped"}:
+                if job["status"] != "stopped":
+                    job.update(status="interrupted", error="Backend restarted; saved partial results are available.")
+                for entry in job.get("discovery_candidates", []):
+                    if entry.get("verification_status") in {"pending", "checking"}:
+                        entry.update(verification_status="interrupted" if entry["verification_status"] == "checking" else "not_checked",
+                                     verification_stop_reason="backend_restarted")
                 db.execute("UPDATE jobs SET data = ?, updated = ? WHERE id = ?", (json.dumps(job), time.time(), job_id))
 
 

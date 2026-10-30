@@ -67,6 +67,27 @@ def main():
     for path, expected in manifest["source_sha256"].items():
         content = subprocess.check_output(["git", "show", manifest["code_commit"] + ":" + path], cwd=ROOT)
         code_checks.append({"path": path, "matches_commit": hashlib.sha256(content).hexdigest() == expected})
+    ledger = result.get("discovery_candidates", [])
+    coverage = result.get("discovery_coverage", [])
+    selection_checks = None
+    if coverage:
+        by_id = {r["record_id"]: r for r in ledger}
+        selected = [r for r in ledger if r["decision"] == "selected"]
+        linked = [r for g in ["accepted", "review", "rejected"] for r in result[g]
+                  if r.get("discovery", {}).get("record_id")]
+        selection_checks = {
+            "ledger_row_count": len(ledger), "unique_ids": len(by_id) == len(ledger),
+            "retained_count_matches": sum(c["retained_rows"] for c in coverage) == len(ledger),
+            "no_unreported_pool_loss": sum(c["retained_rows"] + c["omitted_rows"] for c in coverage) ==
+                sum(len(page.get("organicResults", [])) for b in read("serp.json", []) for page in b.get("items", b.get("pages", []))),
+            "no_exact_master_host_selected": all(not master.has_exact_host(r["domain"]) for r in selected),
+            "no_duplicate_host_selected": len({r["domain"] for r in selected}) == len(selected),
+            "no_pending_checks": all(r.get("verification_status") not in {"pending", "checking"} for r in ledger),
+            "duplicate_links_valid": all(r["duplicate_of"] in by_id and
+                by_id[r["duplicate_of"]]["domain"] == r["domain"] for r in ledger if "duplicate_of" in r),
+            "outcomes_match_ledger": all(by_id[r["discovery"]["record_id"]].get("verification_status") ==
+                ("interrupted" if r.get("reason", "").startswith("verification_interrupted:") else r["status"]) for r in linked)}
+        assert all(v for k, v in selection_checks.items() if k != "ledger_row_count")
     operations = [op for op in result["operations"] if op["kind"] == "apify" and op.get("run_id")]
     def inspect(op):
         import requests
@@ -94,6 +115,7 @@ def main():
         "provider_rechecked": args.check_provider, "all_actors_terminal": all(r["terminal"] for r in runs),
         "actor_usage_usd": actor_cost, "estimated_model_usd": model_cost,
         "combined_execution_usd": actor_cost + model_cost if actor_cost is not None else None,
+        "selection_checks": selection_checks,
         "quote_checks": quote_checks, "page_checks": page_checks, "implementation": code_checks,
         "runs": runs, "discovery_rows": raw_rows}
     (output / "validation.json").write_text(json.dumps(audit, ensure_ascii=False, indent=2))

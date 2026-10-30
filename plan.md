@@ -1,10 +1,10 @@
 # Supplier research agent — step-by-step plan
 
-Updated: 2026-10-28
+Updated: 2026-10-30
 
 **Goal:** find more relevant suppliers, verify the requested products and company identities, and produce useful evidence with predictable research costs.
 
-**Current phase:** the first [no-seed discovery preview](docs/benchmarks/cold-plunge-discovery-2026-10-28/results.md) is complete on local branch `feat/manufacturer-discovery-evaluation`, run `83365b3`; backend qualification remains unchanged from `35a9304`. US search returned nineteen raw hosts, but three checks all came from the first query: two role reviews and one fetch failure, zero qualified. A separate network-blocked diagnostic reproduces a known host preventing a later candidate from being checked. 173 tests pass; eight actors + two models cost approximately $0.057, all actors terminal, master unchanged. Next: retain and audit a bounded pool across queries, filter known/repeated hosts before selecting verification work, prioritize apparent first-party sources, then replay offline and test another small batch. Canada discovery, directory verification, named-SKU/brand relationships, other category scopes, Rutherford's location context and independent final cases remain pending. Manufacturer/brand-owner defaults and requested-product role checks remain; distributors stay optional. No production discovery fix, exports or deployment in this preview. Historical reports and frozen labels are preserved; PRs/deployment remain on hold.
+**Current phase:** [eighteen focused PRs are open](docs/pull-request-stack-2026-10-30.md) in GitHub native stack 19, targeting `main`. The user authorized publication on 2026-10-30; the earlier PR hold is lifted, while merging remains with the user. All eighteen exact branch snapshots passed their offline suites (latest: 229 tests); the upgraded dependency set passed pip-audit. GitHub review checks/CI status must be checked separately before merging; no Actions runs had appeared at publication. No PR was merged, and no deployment or source-list/export work was performed. The 32 initial Greptile findings have repairs and regression coverage; see the [repair report](docs/greptile-review-fixes-2026-10-30.md). The locally validated selection/qualification changes are preserved. Geographic query precision, Canada discovery, broader relationship/category scope and independent final evaluation remain follow-ups.
 
 ## Already completed
 
@@ -51,7 +51,7 @@ Evidence: [validation report from 2026-10-14](docs/validation-2026-10-14.md). Th
 - [x] Run the offline regression suite — 48 tests passed on 2026-10-26.
 - [x] Keep credentials, local job/reference data and editor settings out of Git (`.idea/` added to `.gitignore`).
 - [x] Commit the reviewed implementation locally.
-- [ ] Push and open the pull request when allowed; merge after your approval.
+- [x] Published the branch and opened its topic PR; merging remains pending user review. See the [PR stack and order](docs/pull-request-stack-2026-10-30.md).
 - [ ] After the merge, run the quick security audit and turn confirmed findings into `fix/` branches.
 
 Command:
@@ -69,7 +69,7 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 - [x] Add an optional UI password (`SUPPLIER_UI_PASSWORD`) for the public Streamlit page.
 - [x] Neutralize spreadsheet formulas in CSV downloads (values starting with `=`, `+`, `-`, `@`, tab or carriage return).
 - [ ] Set `SUPPLIER_API_KEY` (and optionally `SUPPLIER_UI_PASSWORD`) on both Railway services before deploying. Without the key the deployed backend returns 503 for everything except `/health`.
-- [ ] Push and open the pull request when allowed; merge after your approval.
+- [x] Published the branch and opened its topic PR; merging remains pending user review. See the [PR stack and order](docs/pull-request-stack-2026-10-30.md).
 
 **Done when:** requests without the key get 401, `/health` still works, and a supplier named `=HYPERLINK(...)` downloads as plain text.
 
@@ -79,7 +79,7 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 - [x] Upgrade packages with published advisories (FastAPI 0.162.0 / Starlette 1.10.0, Streamlit 1.66.1, requests 2.34.2, python-dotenv 1.2.4) and require `certifi>=2026.10.19`. NumPy is 2.2.6 because Streamlit's pyarrow no longer imports on 1.26.
 - [x] Remove unused packages (`tenacity`, `beautifulsoup4`, `apify-client`, `apify-shared`) and unused files (`backend/intent_agent.py`, `backend/brand_utils.py`, `prompt/extract_supplier.md`).
 - [x] Confirm the OpenAI structured-output schemas are unchanged after the upgrade.
-- [ ] Push and open the pull request when allowed; merge after your approval. Recreate `.venv` from `requirements.txt` after this lands.
+- [x] Published the branch and opened its topic PR; merging remains pending user review. See the [PR stack and order](docs/pull-request-stack-2026-10-30.md). Recreate `.venv` from `requirements.txt` after this lands.
 
 **Done when:** the suite passes on the upgraded packages and `pip-audit` reports no known vulnerabilities.
 
@@ -91,7 +91,7 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m unittest discover -s tests -v
 - [x] Compare both the submitted and the final (redirected) website with the master list.
 - [x] Add `related_domain_needs_verification` (same registrable domain, different host) and `name_match_different_website` (same name, different website).
 - [x] Treat legal-suffix differences on the same website (for example "Homecraft Inc.") as the same company and record the name relation.
-- [ ] Push and open the pull request when allowed; merge after your approval.
+- [x] Published the branch and opened its topic PR; merging remains pending user review. See the [PR stack and order](docs/pull-request-stack-2026-10-30.md).
 
 **Done when:** the existing matching trap tests still pass, the 2,000-row profile shows the subdomain and legal-suffix cases under the right statuses, and no candidate disappears without a recorded reason.
 
@@ -127,7 +127,7 @@ First category: **complete cold-plunge systems, with supplier headquarters in th
 - [x] Compare raw hits with historical development/anchor labels and review additional checked candidates. Only Plunge surfaced (1/11 commercially relevant historical sites); none of six historically expected-qualified sites. This is sample retrieval coverage, not independent accuracy or web recall. No final-check host surfaced.
 - [x] Check all nineteen raw hosts and three selected candidates against the master. Seven exact known hosts, one related host, four blocked hosts and seven other unmatched hosts; selected three unmatched, none confirmed new.
 - [x] Review the job's skipped list: only The Spruce recorded blocked; seven known hosts and three additional blocked hosts fell outside the selection window. No paid known-host checks occurred. A separate synthetic offline diagnostic reproduces the pre-master cutoff defect.
-- [ ] Fix bounded candidate selection across queries; retain skip/unselected reasons, filter known/repeated hosts before the verification allowance, and prioritize apparent first-party sources without weakening qualification. Add regression traps, replay saved SERPs, then make another small preview.
+- [x] Fix bounded candidate selection and confirm the core live on `4f241a7`: known/seen filtering before allocation, source-priority query rotation, full decision/verification ledger and API/UI. Final compact/dated-roundup correction `141024c` is offline-confirmed. Twenty-one new regressions; 194 tests pass. [Full validation](docs/benchmarks/cold-plunge-discovery-2026-10-28/selection-fix-results.md): both queries represented, nine known live skips before checks, nineteen rows accounted for; zero qualified, two reviews, one fetch failure.
 - [ ] Test Canada-localized discovery explicitly and assess country/query allocation under a shared budget.
 - [ ] Test directory-to-official-site verification on a small sample in a relevant category. Keep distributor labels and verified suppliers separate.
 
@@ -209,6 +209,9 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 
 | Date | Work | Result / evidence |
 | --- | --- | --- |
+| 2026-10-30 | Published eighteen ready-for-review PRs in native GitHub stack 19 | [PR links, order and validation](docs/pull-request-stack-2026-10-30.md). Main refreshed and unchanged; all eighteen branch snapshots passed (48–194 tests), upgraded requirements audit clean. Focused dependent PRs #1–#18 are attached to this chat. GitHub CodeRabbit success/Greptile pending and no Actions runs observed at publication; local results are not a GitHub CI claim. No merges, deployment, provider research runs, private data publication or exports |
+| 2026-10-28 | Candidate selection confirmed live; final format refinement offline | [Results](docs/benchmarks/cold-plunge-discovery-2026-10-28/selection-fix-results.md). Core/live `4f241a7`, final `141024c`. Same original nineteen rows: both queries, seven known/four blocked skips, full ledger with unchanged three checks. Fresh live: nineteen rows/eighteen hosts, nine known/one blocked skip before paid site checks, both queries; two evidence holds and one fetch failure, zero qualified. Final generic Top10/year-prefix correction replaces roundup with an unverified company lead in offline replay; original control preserved. Twenty-one new regressions, 194 tests pass; four quotes/five page hashes/all selection checks verified. Actual live API ledger renders offline. Eight actors + two models approximately $0.062; all terminal, master unchanged. No exports/final-check tuning/deployment. Canada/query geography and broader evidence coverage remain next |
+| 2026-10-28 | Candidate-selection fix prepared on `fix/discovery-candidate-selection` | [Brief](docs/benchmarks/cold-plunge-discovery-2026-10-28/selection-fix-brief.md), [offline results](docs/benchmarks/cold-plunge-discovery-2026-10-28/selection-fix-results.md). Known/seen filtering before allocation, source-tier query rotation, duplicate/late-skip ledger, API/UI and stop/failure provenance. Nineteen new regressions; 192 tests pass. Same nineteen saved rows now select from both queries, record seven known/four blocked skips and all nineteen decisions with unchanged three-check allowance. No providers or supplier judgments in replay; live confirmation pending |
 | 2026-10-28 | First no-seed manufacturer discovery preview on `83365b3` | [Results and next change](docs/benchmarks/cold-plunge-discovery-2026-10-28/results.md). Nineteen US-localized organic hosts across two queries; three checks all selected from the first query. Cold Plunge Store and Titan need company-role review, Men's Fitness fetch failed; zero qualified/excluded. One blocked skip recorded; seven master-known hosts and three other blocked hosts outside the window. All three selected sites unmatched, not confirmed new. Network-blocked synthetic diagnostic reproduces known-first cutoff. 173 tests pass; nine quotes/six page hashes/implementation hashes verified, master unchanged. Eight actors + two models approximately $0.057, all actors terminal. Backend unchanged; candidate selection fix and Canada preview next; no exports, final-check hosts or deployment |
 | 2026-10-28 | Requested-product role confirmed on `35a9304` | [Results](docs/benchmarks/cold-plunge-2026-10-27/product-role-results.md). Penguin Manufacturer/company and complete-system product facts preserved, requested-category role Unknown → review; Coldture Brand owner/complete bundle/Canadian HQ qualifies live. Fifteen regressions, 173 tests pass. Offline: 48 records, 44 analyses, only five Penguin qualifications held, fifteen other qualified observations preserved; Renu review reason becomes role-specific, no new exclusions. 215 offline and eleven live retained quotes verified; six live page hashes/implementation hashes match. Six actors + two model calls, approximately $0.053, all actors terminal. Actual API result renders offline with distinct company/requested-product role fields. No exports, final-check runs or deployment |
 | 2026-10-28 | Requested-product role check prepared on `fix/requested-product-role` | [Follow-up brief](docs/benchmarks/cold-plunge-2026-10-27/product-role-brief.md). First scope: complete cold-plunge/ice-bath systems for Manufacturer/Brand owner; company role remains distinct from requested-category role. Fifteen new regressions reproduce Penguin's component-to-system inference and protect direct primary-role evidence. Saved development replay: 48 records/44 analyses/four collection failures; only five Penguin qualifications become review, fifteen qualified observations across three supplier websites preserved, no provider calls. All 173 tests pass; bounded live confirmation pending |
@@ -245,3 +248,24 @@ Scoring correction (2026-10-27): the previous development+anchor denominator of 
 | 2026-10-28 | Bounded fallback validation on `a4cf388` | [Results](docs/benchmarks/cold-plunge-2026-10-27/fetch-fallback-results.md). Eight fresh raw pages returned across two previews; Redwood qualifies, Morozko needs role review. Both controlled historical-timeout + fresh-browser probes recover a homepage; no natural fallback or probe qualification claimed. Nine retained supplier quotes verified. Ten new actor runs + two model calls, browser usage $0.0047 and combined execution approximately $0.059. All actors terminal, no exports/final-check cases. Production backend remains unchanged and fallback opt-in; 143 tests pass |
 
 Update the checkboxes and this log after each completed step. Add result/report paths, unresolved issues and the next action; leave incomplete work unchecked.
+
+## Greptile review repair — 2026-10-30
+
+- [x] Address the 32 initial findings with focused fixes and 35 additional regression methods.
+- [x] Rebase the topic chain and validate all eighteen tracked snapshots independently (final application: 229 tests).
+- [x] Preserve historical labels/captures, private references and original branch backup refs.
+- [ ] Confirm fresh automated review results on updated remote heads before merging.
+
+No new paid supplier evaluation, source-list/export change, server, merge or deployment was part of this repair round. See the [repair report](docs/greptile-review-fixes-2026-10-30.md) and [stack order](docs/pull-request-stack-2026-10-30.md).
+
+## Follow-up audit repairs — 2026-10-30
+
+- [x] Back up all 18 heads and repair the stack from the lowest affected layer.
+- [x] Fix 36 follow-up items and add integration coverage for two already-working behaviors.
+- [x] Validate all 18 updated branch heads offline; final application: 276 tests (47 new methods); layers 14–18 rerun after the exclusion decision.
+- [x] Apply product-role checks to plain primary cold-plunge requests as well as complete-system requests.
+- [x] Resolve P2-4 per the user’s choice: explicit exclusions win over contradictory requested products, including bundle boosts. Update the conflicting test and retain its positive control.
+- [x] Obtain user authorization to push the tested stack to the 18 existing PRs; merging remains with the user.
+- [ ] Obtain fresh review on the pushed heads before merging; a separately authorized bounded quality evaluation remains pending.
+
+See [the follow-up report](docs/greptile-followup-fixes-2026-10-30.md) for per-item evidence, exact validated commits, test counts, the resolved exclusion rule, and prepared lease-protected push commands. The preceding initial-review entry describes the earlier 229-test state and is not a claim that this follow-up was already complete.
