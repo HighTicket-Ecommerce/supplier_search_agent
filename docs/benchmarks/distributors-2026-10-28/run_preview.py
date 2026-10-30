@@ -53,13 +53,14 @@ def main():
     sources = sorted(ROOT.glob("backend/*.py")) + [Path(__file__).resolve(), cases_path, cases_path.with_name("brief.md")]
     if (followup := cases_path.with_name("collection-fix-brief.md")).exists():
         sources.append(followup)
+    from backend.benchmark_metadata import git_comparison
+    comparison = git_comparison(ROOT, "docs/distributor-feasibility")
     manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "case_ids": [c["id"] for c in selected],
-        "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "code_commit": comparison["code_commit"],
         "source_sha256": {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources},
         "sheets_writes": 0,
-        "production_changes_since_feasibility": bool(subprocess.check_output(
-            ["git", "diff", "ba6cef9", "--", "backend", "ui"], cwd=ROOT, text=True))}
+        "production_changes_since_feasibility": comparison["changed"], "comparison": comparison}
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
         output.mkdir()

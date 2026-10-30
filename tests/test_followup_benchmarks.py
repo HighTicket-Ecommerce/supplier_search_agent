@@ -42,3 +42,20 @@ class BenchmarkFollowupTests(unittest.TestCase):
             self.assertEqual(settings,{'model':'effective-test-model','max_output_tokens':2048,
                 'input_usd_per_million':2.0,'output_usd_per_million':10.0,'base_url':'https://proxy.example/v1/'})
             self.assertNotIn('secret',json.dumps(manifest)); self.assertNotIn('user:',json.dumps(manifest))
+
+    def test_distributor_main_survives_unavailable_git_comparison(self):
+        import os, shutil, sys
+        from backend import research_runner, job_store
+        helper=load_helper('docs/benchmarks/distributors-2026-10-28/run_preview.py','preview_missing_git')
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ), patch.object(sys,'argv',['preview','--round','offline']):
+            root=Path(tmp).resolve(); source=root/'docs/benchmarks/distributors-2026-10-28'; source.mkdir(parents=True)
+            for name in ['run_preview.py','cases.json','brief.md']:
+                shutil.copyfile(ROOT/'docs/benchmarks/distributors-2026-10-28'/name,source/name)
+            helper.ROOT=root; helper.__file__=str(source/'run_preview.py')
+            with patch.object(helper.subprocess,'check_output',side_effect=subprocess.CalledProcessError(128,['git'])), \
+                 patch.object(research_runner,'run_research_job',side_effect=lambda job_id,request:job_store.update_job(job_id,status='completed')):
+                helper.main()
+            manifest=json.loads(next(root.glob('var/eval/*/offline/manifest.json')).read_text())
+            self.assertIsNone(manifest['code_commit']); self.assertIsNone(manifest['production_changes_since_feasibility'])
+            self.assertEqual(manifest['comparison']['status'],'unavailable')
+            self.assertEqual(manifest['comparison']['baseline_ref'],'docs/distributor-feasibility')
