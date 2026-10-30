@@ -1,0 +1,270 @@
+{
+  "provenance": {
+    "pydantic": "2.8.2",
+    "source_commit": "a7ba0572fd463ec82f38bc2a46b57fc602e50148",
+    "models_sha256": "dde8485bd8d3e94d4089e0f9dca68739dfe0f9fdf7289c6ac3de5a1b44faad02",
+    "method": "Reconstructed from the pre-upgrade source and pinned runtime during PR review; not a previously captured provider request."
+  },
+  "supplier_analysis": {
+    "$defs": {
+      "Evidence": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "enum": [
+              "role",
+              "product_match",
+              "country",
+              "identity"
+            ],
+            "title": "Claim",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "quote": {
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim",
+          "source_url",
+          "quote"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "is_product_company": {
+        "title": "Is Product Company",
+        "type": "boolean"
+      },
+      "company_name": {
+        "title": "Company Name",
+        "type": "string"
+      },
+      "supplier_type": {
+        "enum": [
+          "Manufacturer",
+          "Brand owner",
+          "Distributor",
+          "Retailer",
+          "Marketplace",
+          "Media / Blog",
+          "Unknown"
+        ],
+        "title": "Supplier Type",
+        "type": "string"
+      },
+      "owns_brand": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Owns Brand"
+      },
+      "product_match": {
+        "enum": [
+          "supported",
+          "not_established",
+          "explicitly_ruled_out"
+        ],
+        "title": "Product Match",
+        "type": "string"
+      },
+      "product_kind": {
+        "enum": [
+          "primary",
+          "bundle_includes_primary",
+          "accessory",
+          "service",
+          "unknown"
+        ],
+        "title": "Product Kind",
+        "type": "string"
+      },
+      "matched_product_urls": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Matched Product Urls",
+        "type": "array"
+      },
+      "country": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Country"
+      },
+      "country_basis": {
+        "enum": [
+          "headquarters",
+          "manufacturing",
+          "market",
+          "unknown"
+        ],
+        "title": "Country Basis",
+        "type": "string"
+      },
+      "identity_match": {
+        "enum": [
+          "supported",
+          "not_established",
+          "contradicted",
+          "not_requested"
+        ],
+        "title": "Identity Match",
+        "type": "string"
+      },
+      "email": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Email"
+      },
+      "phone": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Phone"
+      },
+      "confidence": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "Confidence",
+        "type": "number"
+      },
+      "notes": {
+        "title": "Notes",
+        "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "title": "Evidence",
+        "type": "array"
+      }
+    },
+    "required": [
+      "is_product_company",
+      "company_name",
+      "supplier_type",
+      "owns_brand",
+      "product_match",
+      "product_kind",
+      "matched_product_urls",
+      "country",
+      "country_basis",
+      "identity_match",
+      "email",
+      "phone",
+      "confidence",
+      "notes",
+      "evidence"
+    ],
+    "title": "SupplierAnalysis",
+    "type": "object"
+  },
+  "catalogue_analysis": {
+    "$defs": {
+      "CatalogueDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "eligible",
+              "excluded",
+              "review"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "product_kind": {
+            "enum": [
+              "primary",
+              "bundle_includes_primary",
+              "accessory",
+              "component",
+              "service",
+              "other",
+              "unknown"
+            ],
+            "title": "Product Kind",
+            "type": "string"
+          },
+          "eligible_variant_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Eligible Variant Ids",
+            "type": "array"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "status",
+          "product_kind",
+          "eligible_variant_ids",
+          "quote",
+          "reason"
+        ],
+        "title": "CatalogueDecision",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "products": {
+        "items": {
+          "$ref": "#/$defs/CatalogueDecision"
+        },
+        "title": "Products",
+        "type": "array"
+      }
+    },
+    "required": [
+      "products"
+    ],
+    "title": "CatalogueAnalysis",
+    "type": "object"
+  }
+}
