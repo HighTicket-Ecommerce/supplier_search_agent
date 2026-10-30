@@ -45,7 +45,9 @@ HQ_LOCATION_TYPES = {"headquarters", "office", "company_base"}
 
 
 def _site_kind(text):
-    return next((kind for kind, pattern in _SITE_TYPES if pattern.search(text)), None)
+    shared_hq = bool(re.search(r"\bour\s+(?:headquarters|hq|head office)\s+and\s+(?:factory|warehouse)\s+(?:are|is)\s+(?:in|at)\b", text, re.I))
+    return next((kind for kind, pattern in _SITE_TYPES if pattern.search(text)
+                 and not (shared_hq and kind in {"factory", "warehouse"})), None)
 
 
 def _location_label(text):
@@ -55,7 +57,7 @@ def _location_label(text):
     return bool(_site_kind(text) or _HEAD_OFFICE.search(text) or _OFFICE_CONTEXT.search(text))
 
 
-def _contexts(quote, source):
+def _contexts(quote, source, *, sentence_bound=True):
     needle = normalize_quote(quote)
     blocks = [value for part in re.split(r"\n\s*\n", source) if (value := normalize_quote(part))]
     starts, offset = [], 0
@@ -79,7 +81,12 @@ def _contexts(quote, source):
             prefix.insert(0, previous)
         begin = max(starts[first], match.start()-140)
         end = min(starts[last]+len(blocks[last]), match.end()+300)
-        yield " ".join(prefix + [normalized[begin:end]])
+        if not sentence_bound:
+            yield " ".join(prefix + [normalized[begin:end]])
+            continue
+        before = re.split(r"(?<=[.!?])\s+", normalized[begin:match.start()])[-1]
+        after = "" if needle.endswith((".", "!", "?")) else re.split(r"(?<=[.!?])\s+", normalized[match.end():end])[0]
+        yield " ".join(prefix + [before + normalized[match.start():match.end()] + after])
 
 
 def location_quote_kind(quote, source="", source_url=""):
@@ -110,12 +117,19 @@ def location_quote_kind(quote, source="", source_url=""):
             return "headquarters" if explicit_hq else "office"
         if has_value and (_HEAD_OFFICE.search(prefix) or _OFFICE_CONTEXT.search(prefix)):
             return "headquarters" if _HEAD_OFFICE.search(prefix) else "office"
-        if _BASED.search(quote) or _SELF_LOCATION.search(quote):
-            return "company_base"
-        if kind := _site_kind(context):
+        # A separate self-attributed shipping action is not the location's subject.
+        subject_context = re.split(r",\s*we\s+(?:ship|deliver)\b", context, maxsplit=1, flags=re.I)[0]
+        if kind := _site_kind(subject_context):
             rejected_kind = kind
+        elif _BASED.search(quote) or _SELF_LOCATION.search(quote):
+            return "company_base"
         elif _ORIGIN.search(context):
             rejected_kind = "manufacturing_origin"
+    if rejected_kind == "unknown" and source:
+        # Preserve useful rejection diagnostics without lending a preceding/following
+        # sentence authority to establish a company location.
+        rejected_kind = next((kind for context in _contexts(quote, source, sentence_bound=False)
+                              if (kind := _site_kind(context))), "unknown")
     return rejected_kind
 
 
