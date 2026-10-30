@@ -73,12 +73,17 @@ def _passages(quote, source):
 
 def manufacturer_label(clause, company, heading="", product=""):
     actor, named = _subjects(company)
-    label = (_self_role(clause, actor, "manufacturer") or
+    # A label's value must identify this company. Under a company heading a
+    # verbless tagline is allowed, but a manufacturer's actions/terms are not.
+    direct_label = re.fullmatch(r"manufacturer\s*:\s*" + named + r"[.!]?", clause, re.I)
+    tagline = re.fullmatch(
+        r"(?:(?:a|an|the|trusted|leading|professional|independent|Canadian|American)\s+){0,8}"
+        r"manufacturer(?:\s+(?:of|since)\s+[^.!?]+)?[.!]?", clause, re.I)
+    label = (_self_role(clause, actor, "manufacturer(?!'s)") or direct_label or
              re.search(named + r",\s*(?:as\s+)?an?\s+manufacturer\b", clause, re.I) or
-             (re.search(named, heading, re.I) and len(clause) < 160 and
-              re.match(r"(?:(?:a|an|the|trusted|leading|professional|independent|Canadian|American)\s+){0,8}manufacturer\b", clause, re.I)))
+             (re.search(named, heading, re.I) and len(clause) < 160 and tagline and not re.search(r"\b(?:is|are|supplies|stocks|sells|provides)\b", clause, re.I)))
     title = re.match(named + r"\s+([^.!?;:,]{0,70})\bmanufacturer\b", clause, re.I)
-    if title and _has_goods(clause, product) and not re.search(r"\b(?:sells?|supply|supplies|distributes?|retails?|resells?|from|for|with|by|partners?)\b", title[1], re.I):
+    if title and _has_goods(clause, product) and not re.search(r"\b(?:is|are|stocks?|dealers?|official|of|sells?|supply|supplies|distributes?|retails?|resells?|from|for|with|by|partners?)\b", title[1], re.I):
         label = True
     return bool(label)
 
