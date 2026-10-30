@@ -54,8 +54,7 @@ def main():
     if (followup := cases_path.with_name("collection-fix-brief.md")).exists():
         sources.append(followup)
     manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
-        "selection_policy": "positive_terms_and_missing_trade_policy",
-        "case_ids": [c["id"] for c in cases["cases"]],
+        "case_ids": [c["id"] for c in selected],
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources},
         "sheets_writes": 0,

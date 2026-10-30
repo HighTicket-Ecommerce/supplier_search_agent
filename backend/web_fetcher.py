@@ -78,7 +78,7 @@ class PageHTML(HTMLParser):
 
 def _product_terms(product):
     # Exclusions are evidence for the model, never positive navigation keywords.
-    positive = re.split(r"\b(?:excluding|except(?: for)?|but not)\b", product or "", maxsplit=1, flags=re.I)[0]
+    positive = _positive_product_brief(product or "")
     words = re.findall(r"\w+", positive.casefold().replace("_", " "))
     return {t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t
             for t in words if len(t) >= 3 and t not in {"and", "the", "for", "with", "our", "not"}}
@@ -88,13 +88,21 @@ def _positive_product_brief(product):
     return positive_brief(product)
 
 
+def _public_trade_entry(url):
+    return bool(re.fullmatch(r"/(?:account/(?:login|register)|login|register|sign-in)/?", unquote(urlsplit(url).path), re.I))
+
+
+def _has_trade_policy(text):
+    return bool(re.search(r"\bwholesale (?:trade(?: only)?|distributor|only)\b|\btrade (?:customers )?only\b", text, re.I))
+
+
 def _page_priority(url, product, label="", *, excluded_products=None, trade_policy=False):
     parsed = urlsplit(url)
     path = unquote(parsed.path).casefold()
     if re.search(r"\.(?:jpe?g|png|webp|gif|svg|ico|css|js|json|pdf|zip|mp4|woff2?)$", path) or re.search(r"/(?:cdn|assets)/", path):
         return None
     # Only public entry/policy pages are candidates; account actions stay excluded.
-    public_entry = bool(re.fullmatch(r"/(?:account/(?:login|register)|login|register|sign-in)/?", path))
+    public_entry = _public_trade_entry(url)
     public_query = all(key.casefold() == "returnurl" for key, _ in parse_qsl(parsed.query, keep_blank_values=True))
     if trade_policy and public_entry and public_query:
         return (3, 0)
@@ -282,7 +290,8 @@ def fetch_website_pages(base_url, context):
             rank = _page_priority(target, context.request.product, link.get("label", ""),
                 excluded_products=context.request.excluded_products, trade_policy=trade_policy)
             if rank is not None:
-                if trade_policy and rank[0] == 3 and "trade" in attempted_kinds:
+                if trade_policy and rank[0] == 3 and (any(_has_trade_policy(p["text"]) for p in pages) or
+                        (_public_trade_entry(target) and "trade_entry" in attempted_kinds)):
                     continue
                 candidates.setdefault(target, dict(link, rank=rank, kind="hq" if rank[0] < 2 else "product" if rank[0] == 2
                                                    else "trade" if trade_policy else "dealer"))
@@ -299,11 +308,10 @@ def fetch_website_pages(base_url, context):
         kinds = {c["kind"] for c in candidates.values()}
         # This only schedules evidence collection; a wholesale word does not
         # qualify the company or prove any particular brand relationship.
-        needs_trade = trade_policy and not any(re.search(
-            r"\bwholesale (?:trade(?: only)?|distributor|only)\b|\btrade (?:customers )?only\b", p["text"], re.I) for p in pages)
+        needs_trade = trade_policy and not any(_has_trade_policy(p["text"]) for p in pages)
         # After one company page and one product page, collect the missing
         # policy before a second company page can consume the final slot.
-        if needs_trade and "trade" in kinds and "trade" not in attempted_kinds and ("product" in attempted_kinds or "product" not in kinds):
+        if needs_trade and "trade" in kinds and ("product" in attempted_kinds or "product" not in kinds):
             preferred = "trade"
         elif needs_hq and "hq" in kinds and ("hq" not in attempted_kinds or "product" in attempted_kinds):
             preferred = "hq"
@@ -321,8 +329,9 @@ def fetch_website_pages(base_url, context):
         candidate = candidates.pop(target)
         seen.add(target.rstrip("/"))
         attempted_kinds.add(candidate["kind"])
-        if candidate["kind"] == "trade":
-            candidates = {key: value for key, value in candidates.items() if value["kind"] != "trade"}
+        if candidate["kind"] == "trade" and _public_trade_entry(target):
+            attempted_kinds.add("trade_entry")
+            candidates = {key: value for key, value in candidates.items() if not _public_trade_entry(key)}
         before = context.pages
         try:
             page = fetch_page(target, context, attempts_left=context.request.max_pages_per_supplier-attempts)
@@ -339,6 +348,8 @@ def fetch_website_pages(base_url, context):
             page = dict(page, discovered_from=candidate.get("discovered_from"), evidence_purpose=candidate["kind"])
             pages.append(page)
             discover(page)
+            if trade_policy and _has_trade_policy(page["text"]):
+                candidates = {key: value for key, value in candidates.items() if value["kind"] != "trade"}
     return pages
 
 
