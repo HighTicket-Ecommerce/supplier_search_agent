@@ -42,3 +42,18 @@ class RoleFollowupTests(unittest.TestCase):
             with self.subTest(text=text):
                 status,recovery=self.check(text,role,product)
                 self.assertEqual(status,'not_established'); self.assertFalse(recovery)
+
+    def test_role_tense_and_negation_belong_to_the_production_predicate(self):
+        positives=['We manufacture sauna heaters that could reduce energy use.',
+                   'We manufacture sauna heaters that will last decades.',
+                   'We manufacture sauna heaters and will ship worldwide.',
+                   'We manufacture sauna heaters, not saunas.',
+                   'We manufacture sauna heaters in a factory formerly owned by Nokia.']
+        negatives=['We will begin manufacturing sauna heaters.', 'We will manufacture sauna heaters.',
+                   "We don't manufacture sauna heaters.", 'We no longer manufacture sauna heaters.',
+                   'We plan to manufacture sauna heaters.', 'Note that we manufacture sauna heaters no longer.']
+        for text in positives+negatives:
+            with self.subTest(text=text):
+                status,recovery=self.check(text)
+                self.assertEqual(status,'supported' if text in positives else 'not_established')
+                self.assertEqual(bool(recovery),text in positives)

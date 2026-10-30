@@ -91,8 +91,12 @@ def manufacturer_label(clause, company, heading="", product=""):
 def _supported_roles(quote, clause, heading, company, product=""):
     if not _CUES.search(quote):
         return set(), "quote_does_not_assert_a_company_role"
-    assertion = re.split(r"\b(?:that|which)\b", clause, maxsplit=1, flags=re.I)[0]
-    if _UNSUPPORTED.search(assertion):
+    cue = _CUES.search(clause)
+    # Tense/negation before the role predicate governs that assertion. Benefits,
+    # logistics, contrasted objects and a facility's history have other subjects.
+    assertion = clause[:cue.end()] if cue else clause
+    trailing_role_negation = re.search(r"\bno longer[.!]?\s*$", clause, re.I)
+    if _UNSUPPORTED.search(assertion) or trailing_role_negation:
         return set(), "negated_historical_or_hypothetical_role"
     if _OTHER_SPEAKER.search(heading + " " + clause):
         return set(), "role_attributed_to_other_speaker"
