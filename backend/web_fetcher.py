@@ -112,7 +112,7 @@ def _page_priority(url, product, label=""):
             # Inspect the item slug/label, not a parent collection or included extras.
             names = [re.sub(r"[-_]+", " ", unquote(name).casefold())
                      for name in (positive_product, path.rstrip("/").rsplit("/", 1)[-1], label)]
-            heads = [re.split(r"\b(?:with|including|includes?)\b", name, maxsplit=1)[0] for name in names]
+            heads = [re.split(r"\b(?:with|including|includes?|for|compatible with|suitable for)\b", name, maxsplit=1)[0] for name in names]
             accessory_pattern = r"\b(?:accessor(?:y|ies)|filters?|covers?|(?:dry )?mats?|chemicals?|cleaners?|hoses?|steps?)\b"
             def complete_pair_bundle(name):
                 return re.search(r"\b(?:tub|plunge|ice bath)\s+and\s+chiller\s+bundle\b", name)
