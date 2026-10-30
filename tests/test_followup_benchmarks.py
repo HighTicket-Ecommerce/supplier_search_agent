@@ -68,6 +68,13 @@ class BenchmarkFollowupTests(unittest.TestCase):
             root=Path(tmp).resolve(); source=root/'docs/benchmarks/cold-plunge-discovery-2026-10-28'; source.mkdir(parents=True)
             for name in ['run_discovery_check.py','brief.md']:
                 shutil.copyfile(ROOT/'docs/benchmarks/cold-plunge-discovery-2026-10-28'/name,source/name)
+            for extra in ['selection-fix-brief.md']:
+                path=ROOT/'docs/benchmarks/cold-plunge-discovery-2026-10-28'/extra
+                if path.exists(): shutil.copyfile(path,source/extra)
+            for relative in ['docs/benchmarks/cold-plunge-discovery-2026-10-28/audit_discovery.py','ui/streamlit_app.py','tests/test_discovery_selection.py']:
+                path=ROOT/relative
+                if path.exists():
+                    target=root/relative; target.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(path,target)
             helper.ROOT=root; helper.__file__=str(source/'run_discovery_check.py')
             os.environ['SUPPLIER_REFERENCE_DIR']=str(root/'references')
             reference=master_index.import_reference('Supplier,Website\nKnown,https://known.example\n')
