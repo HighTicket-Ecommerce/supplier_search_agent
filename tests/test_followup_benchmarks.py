@@ -93,3 +93,33 @@ class BenchmarkFollowupTests(unittest.TestCase):
             self.assertEqual(len(pages),2); self.assertTrue(model.called)
             self.assertTrue(all(len(p['text'])<len(raw_html) for p in pages))
             self.assertEqual(records[0]['actor_runs'][0]['run_id'],'mock-run')
+
+    def test_discovery_audit_accepts_current_items_and_legacy_pages(self):
+        import hashlib, os, sys
+        from backend import master_index
+        helper=load_helper('docs/benchmarks/cold-plunge-discovery-2026-10-28/audit_discovery.py','discovery_audit')
+        for field in ['items','pages']:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ):
+                root=Path(tmp).resolve(); helper.ROOT=root
+                os.environ['SUPPLIER_REFERENCE_DIR']=str(root/'references')
+                reference=master_index.import_reference('Supplier,Website\nKnown,https://known.example\n')
+                master_path=root/'references'/(reference['id']+'.json')
+                labels=root/'docs/benchmarks/cold-plunge-2026-10-27/labels.json'; labels.parent.mkdir(parents=True); labels.write_text('{"cases":[]}')
+                output=root/'var/eval/cold-plunge-discovery-2026-10-28/offline'; output.mkdir(parents=True)
+                ledger=[{'record_id':'one','domain':'candidate.example','decision':'selected','verification_status':'review'},
+                        {'record_id':'two','domain':'candidate.example','decision':'duplicate','duplicate_of':'one','verification_status':'not_checked'}]
+                result={'job_id':'offline','accepted':[],'rejected':[],'skipped':[],
+                        'review':[{'url':'https://candidate.example','status':'review','reason':'fixture','discovery':{'record_id':'one'}}],
+                        'operations':[],'discovery_candidates':ledger,'discovery_coverage':[{'retained_rows':2,'omitted_rows':0}]}
+                manifest={'settings':{'master_reference_id':reference['id']},'code_commit':'mock',
+                          'source_sha256':{'backend/mock.py':hashlib.sha256(b'mock source').hexdigest()},
+                          'master_sha256':hashlib.sha256(master_path.read_bytes()).hexdigest()}
+                serp=[{'input':{'countryCode':'us'},field:[{'organicResults':[{'url':'https://candidate.example'},{'url':'https://candidate.example/about'}]}]}]
+                for name,value in [('result.json',result),('manifest.json',manifest),('serp.json',serp)]:
+                    (output/name).write_text(json.dumps(value))
+                with patch.object(sys,'argv',['audit','--round','offline']), patch.object(helper.subprocess,'check_output',return_value=b'mock source'):
+                    helper.main()
+                audit=json.loads((output/'validation.json').read_text())
+                self.assertEqual(audit['raw_organic_rows'],2)
+                self.assertTrue(audit['selection_checks']['no_unreported_pool_loss'])
+                self.assertFalse(audit['provider_rechecked'])

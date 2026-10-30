@@ -79,7 +79,7 @@ def main():
             "ledger_row_count": len(ledger), "unique_ids": len(by_id) == len(ledger),
             "retained_count_matches": sum(c["retained_rows"] for c in coverage) == len(ledger),
             "no_unreported_pool_loss": sum(c["retained_rows"] + c["omitted_rows"] for c in coverage) ==
-                sum(len(page.get("organicResults", [])) for b in read("serp.json", []) for page in b.get("pages", [])),
+                sum(len(page.get("organicResults", [])) for b in read("serp.json", []) for page in b.get("items", b.get("pages", []))),
             "no_exact_master_host_selected": all(not master.has_exact_host(r["domain"]) for r in selected),
             "no_duplicate_host_selected": len({r["domain"] for r in selected}) == len(selected),
             "no_pending_checks": all(r.get("verification_status") not in {"pending", "checking"} for r in ledger),
