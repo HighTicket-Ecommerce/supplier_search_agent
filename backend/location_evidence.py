@@ -6,7 +6,7 @@ Those still require the supplier analysis and its official source.
 import re
 import unicodedata
 from urllib.parse import urlsplit
-from backend.location_text import SELF_LOCATION_RE, NEGATION
+from backend.location_text import SELF_LOCATION_RE, NEGATION, ambiguous_shared_location
 
 
 def normalize_quote(value):
@@ -62,7 +62,7 @@ def _contexts(quote, source):
 def hq_quote_acceptable(quote, source="", source_url=""):
     quote = normalize_quote(quote)
     shared_hq = bool(re.search(r"\bour\s+(?:headquarters|hq|head office)\s+and\s+(?:factory|warehouse)\s+(?:are|is)\s+(?:in|at)\b", quote, re.I))
-    if not quote or (_NON_LOCATION.search(quote) and not shared_hq) or _NEGATED.search(quote):
+    if not quote or (_NON_LOCATION.search(quote) and not shared_hq) or _NEGATED.search(quote) or ambiguous_shared_location(quote):
         return False
     explicit_hq = bool(_HEAD_OFFICE.search(quote))
     if _ORIGIN.search(quote) and not explicit_hq:
@@ -71,7 +71,7 @@ def hq_quote_acceptable(quote, source="", source_url=""):
     contact_page = bool(re.search(r"(?:contact|about|company|our-story|location)", urlsplit(source_url).path, re.I))
     for context in contexts:
         # A clipped quote from "not based in" or a warehouse/shipping address is not HQ proof.
-        if _NEGATED.search(context):
+        if _NEGATED.search(context) or ambiguous_shared_location(context):
             continue
         if not explicit_hq:
             if _OTHER_SITE.search(context):

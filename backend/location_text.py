@@ -22,3 +22,29 @@ _CITY_WORD = r"[^\W\d_]+(?:[-'][^\W\d_]+)*"
 _CITY = r"(?!(?:supplier|manufacturer|customer|partner|dealer)\b)" + _CITY_WORD + r"(?:\s+(?!(?:to|for|a|an|supplier|customer|manufacturer)\b)" + _CITY_WORD + r"){0,4}"
 SELF_LOCATION_RE = re.compile(r"\bwe(?:'re|\s+are)\s+(?:an?\s+)?" + _CITY + r",\s*" + REGION_VALUE +
                               r"\s+(?:manufacturer|company|business)\b", re.I)
+
+_HQ = r"(?:(?:corporate|global|company|registered)\s+)?(?:headquarters|head office|hq)"
+_FACILITY = r"(?:factor(?:y|ies)|warehouses?|manufacturing facilit(?:y|ies)|production facilit(?:y|ies))"
+_SHARED = re.compile(r"\b(?:our\s+)?(?P<left>"+_HQ+"|"+_FACILITY+r")\s*(?:and|&)\s*(?P<right>"+
+                     _HQ+"|"+_FACILITY+r")\s+(?:are|is)\s+(?:both\s+)?(?:(?:located|situated|based)\s+)?"
+                     r"(?:in|at)\s+(?P<value>[^.!?]+)", re.I)
+
+
+def _shared_location(text):
+    match = _SHARED.search(text)
+    if match and bool(re.fullmatch(_HQ, match["left"], re.I)) != bool(re.fullmatch(_HQ, match["right"], re.I)):
+        return match
+    return None
+
+
+def ambiguous_shared_location(text):
+    match = _shared_location(text)
+    if not match:
+        return False
+    # Coordination inside a recognized region name is not a second location.
+    value = re.sub(REGION_NAMES, "REGION", match["value"], flags=re.I)
+    return bool(re.search(r"\b(?:respectively|and)\b|&", value, re.I))
+
+
+def shared_headquarters(text):
+    return bool(_shared_location(text)) and not ambiguous_shared_location(text)

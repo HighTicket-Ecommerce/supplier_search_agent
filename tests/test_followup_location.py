@@ -3,6 +3,13 @@ from backend import location_evidence, supplier_validator
 
 
 class LocationFollowupTests(unittest.TestCase):
+    def test_shared_subjects_do_not_assign_the_factory_country_to_headquarters(self):
+        for source in ["Our headquarters and factory are in Toronto and Shenzhen, China respectively.",
+                       "Our headquarters and factory are in Toronto and Shenzhen, China."]:
+            for quote in (source, "Our headquarters and factory are in Toronto"):
+                with self.subTest(source=source, quote=quote):
+                    self.assertFalse(location_evidence.hq_quote_acceptable(quote, source))
+
     def test_location_negation_handles_contractions_generally(self):
         for text in ["We haven't been based in Canada since 2019.",
                      "Our head office hasn't been in Toronto, Ontario since 2019.",
