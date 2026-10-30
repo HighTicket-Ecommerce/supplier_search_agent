@@ -60,3 +60,13 @@ class NavigationFollowupTests(unittest.TestCase):
             with self.subTest(slug=slug):
                 self.assertLess(self.rank('/products/'+slug, label=label), self.rank('/collections/cold-plunge-systems'))
         self.assertGreater(self.rank('/products/all-in-one-plunge-filter'), self.rank('/collections/cold-plunge-systems'))
+
+    def test_structured_exclusions_override_mentions_in_the_brief(self):
+        product='Gas grills; replacement filters optional'
+        wanted=web_fetcher._page_priority('https://example.com/collections/gas-grills',product,excluded_products=['replacement filters'])
+        excluded=web_fetcher._page_priority('https://example.com/products/replacement-filters',product,excluded_products=['replacement filters'])
+        self.assertLess(wanted,excluded)
+        product='Gas grills and replacement filters'
+        wanted=web_fetcher._page_priority('https://example.com/collections/gas-grills',product,excluded_products=['replacement filters'])
+        excluded=web_fetcher._page_priority('https://example.com/products/replacement-filters',product,excluded_products=['replacement filters'])
+        self.assertLess(wanted,excluded)

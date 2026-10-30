@@ -145,7 +145,11 @@ def _page_priority(url, product, label="", *, excluded_products=None, trade_poli
             if product_path and not re.search(r"\b(?:accessor\w*|parts?|replacements?|filters?|covers?|services?)\b", exclusion, re.I):
                 continue
             excluded = _product_terms(exclusion)
-            if excluded and not excluded <= terms and any(excluded <= subject for subject in subject_terms):
+            # Preserve an explicitly requested single accessory category. Mentions
+            # in a multi-category brief do not cancel structured exclusions.
+            primary_accessory = (not re.search(r"[,;]|\b(?:and|or)\b", positive_product, re.I)
+                and re.search(r"\b" + re.escape(exclusion) + r"\s*$", positive_product, re.I))
+            if excluded and not primary_accessory and any(excluded <= subject for subject in subject_terms):
                 tier += 4
                 break
         if re.search(r"complete|system", product, re.I) and re.search(r"cold|plunge", product, re.I):
