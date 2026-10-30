@@ -27,7 +27,7 @@ def _primary_object(role, company, context, heading=""):
     for value in objects:
         subject = _PURPOSE_OR_OTHER_ACTION.split(value, maxsplit=1)[0]
         for match in _PRIMARY.finditer(subject):
-            prefix = subject[:match.start()]
+            prefix = re.split(r"[,;]|\b(?:and|including|includes?|such as)\b", subject[:match.start()], flags=re.I)[-1]
             suffix = re.split(r"[,;]|\b(?:with|including|includes?|featuring|and|that|which)\b", subject[match.end():], maxsplit=1, flags=re.I)[0]
             if not _COMPONENT_NOUN.search(prefix) and not _COMPONENT_NOUN.search(suffix):
                 return True, objects
