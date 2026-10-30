@@ -49,3 +49,14 @@ class NavigationFollowupTests(unittest.TestCase):
                      "/products/steps-for-the-plunge-and-chiller-bundle"):
             with self.subTest(path=path):
                 self.assertLess(self.rank("/collections/cold-plunge-systems"), self.rank(path))
+
+    def test_complete_bundle_head_can_precede_included_extras(self):
+        for slug, label in [
+            ('cold-plunge-tub-chiller-bundle-filter-cover', 'Tub & Chiller Bundle + Filter & Cover'),
+            ('chiller-and-tub-bundle-filter-cover', 'Chiller and Tub Bundle with Cover'),
+            ('cold-plunge-tub-chiller-package-filter', 'Tub and Chiller Package + Filter'),
+            ('cold-plunge-chiller-tub-combo-cover', 'Chiller and Tub Combo + Cover'),
+            ('cold-plunge-complete-system-filter-and-cover', 'Complete Cold Plunge System + Filter and Cover')]:
+            with self.subTest(slug=slug):
+                self.assertLess(self.rank('/products/'+slug, label=label), self.rank('/collections/cold-plunge-systems'))
+        self.assertGreater(self.rank('/products/all-in-one-plunge-filter'), self.rank('/collections/cold-plunge-systems'))

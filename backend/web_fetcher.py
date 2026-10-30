@@ -115,16 +115,24 @@ def _page_priority(url, product, label=""):
                      for name in (positive_product, path.rstrip("/").rsplit("/", 1)[-1], label)]
             heads = [re.split(r"\b(?:with|including|includes?|for|compatible with|suitable for)\b", name, maxsplit=1)[0] for name in names]
             accessory_pattern = r"\b(?:accessor(?:y|ies)|filters?|covers?|(?:dry )?mats?|chemicals?|cleaners?|hoses?|steps?)\b"
-            def complete_pair_bundle(name):
-                return re.search(r"\b(?:tub|plunge|ice bath)\s+and\s+chiller\s+bundle\b", name)
+            def complete_configuration(name):
+                marker = re.search(r"\b(?:bundle|package|combo|system|kit)\b", name)
+                if not marker:
+                    return False
+                subject = name[:marker.start()]
+                if re.search(accessory_pattern, subject):
+                    return False
+                pair = re.search(r"\b(?:tub|plunge|ice bath)\b", subject) and re.search(r"\bchiller\b", subject)
+                primary = re.search(r"\b(?:plunge|ice bath)\b", subject) and re.search(r"\b(?:complete|integrated|all in one)\b", subject)
+                return bool(pair or primary)
             accessory = not re.search(accessory_pattern, heads[0]) and any(
-                re.search(accessory_pattern, name) and not complete_pair_bundle(name) for name in heads[1:])
+                re.search(accessory_pattern, name) and not complete_configuration(name) for name in heads[1:])
             component = re.search(r"chiller|tubs?-only", path)
-            complete = re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
+            complete = any(complete_configuration(name) for name in heads[1:]) or re.search(r"bundle|integrated|all-in-one|tub-and-chiller", path)
             if accessory or (component and not complete):
                 tier += 4
-            elif complete and hits:
-                tier -= 1
+            elif complete:
+                tier = min(tier - 1, -1)
         return (2, tier, -hits)
     if re.search(r"dealer|wholesale", path):
         return (3, 0)
