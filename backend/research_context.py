@@ -21,6 +21,8 @@ class ResearchContext:
         self.exposure = 0.0
         self.operations = []
         self.catalogues = {}
+        self.website_pages = {}
+        self.fetch_failures = []
 
     def checkpoint(self):
         job = get_job(self.job_id)

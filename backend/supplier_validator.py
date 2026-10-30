@@ -69,7 +69,10 @@ def process_supplier(product, url, context, brand_hint=None, discovery_source=No
         return dict(result, status=status, reason=reason)
 
     try:
-        pages = fetch_website_pages(url, context)
+        host = domain_from_url(url)
+        if host not in context.website_pages:
+            context.website_pages[host] = fetch_website_pages(url, context)
+        pages = list(context.website_pages[host])
     except (JobStopped, LimitReached):
         raise
     except Exception as exc:
@@ -77,6 +80,8 @@ def process_supplier(product, url, context, brand_hint=None, discovery_source=No
     if not pages:
         return finish("retry_needed", "website_evidence_unavailable")
     result["url"] = pages[0]["url"]
+    if context.fetch_failures:
+        result["collection_failures"] = list(context.fetch_failures)
     shopify_hint = any(re.search(r"cdn\.shopify\.com|myshopify\.com|/cdn/shop/", p["text"], re.I) for p in pages)
     explicitly_requested = domain_from_url(url) in {domain_from_url(u) for u in context.request.shopify_catalogue_urls}
     if context.request.use_shopify_catalogue and (shopify_hint or explicitly_requested):

@@ -16,12 +16,20 @@ def env_float(name: str, default: float) -> float:
         return default
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2-2025-12-11")
 OPENAI_MAX_OUTPUT_TOKENS = max(128, min(8192, env_int("OPENAI_MAX_OUTPUT_TOKENS", 1800)))
 # Standard GPT-5.2 pricing, verified 2026-10-14. Other models require explicit rates.
 _known_price = (1.75, 14.0) if OPENAI_MODEL in {"gpt-5.2", "gpt-5.2-2025-12-11"} else (0, 0)
 OPENAI_INPUT_USD_PER_MILLION = env_float("OPENAI_INPUT_USD_PER_MILLION", _known_price[0])
 OPENAI_OUTPUT_USD_PER_MILLION = env_float("OPENAI_OUTPUT_USD_PER_MILLION", _known_price[1])
+
+
+def model_settings_snapshot():
+    """Non-secret effective model settings for reproducible preview manifests."""
+    return {"model": OPENAI_MODEL, "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
+            "input_usd_per_million": OPENAI_INPUT_USD_PER_MILLION,
+            "output_usd_per_million": OPENAI_OUTPUT_USD_PER_MILLION}
+
 NO_TEMPERATURE_MODELS = {
     "gpt-5",
     "gpt-5-mini",

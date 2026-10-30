@@ -311,9 +311,9 @@ class CatalogueAndMatchingTests(unittest.TestCase):
         with patch.object(socket,"getaddrinfo",return_value=addresses):
             with self.assertRaises(ValueError):public_fetch.check_public_url("https://localhost")
         context=self.context()
-        response=MagicMock();response.status_code=200;response.encoding="utf-8";response.iter_content.return_value=[b"0123456789"]
-        session=MagicMock();session.request.return_value.__enter__.return_value=response
-        with patch.object(public_fetch,"check_public_url"),patch.object(public_fetch.requests,"Session",return_value=session):
+        response=MagicMock();response.status=200;response.stream.return_value=[b"0123456789"]
+        pool=MagicMock();pool.urlopen.return_value=response
+        with patch.object(public_fetch,"check_public_url",return_value="93.184.216.34"),patch.object(public_fetch,"_connection",return_value=pool):
             with self.assertRaises(ValueError):public_fetch.fetch_public("https://example.com",context,max_bytes=5)
         self.assertEqual(context.pages,1);self.assertEqual(context.calls,1);self.assertEqual(context.exposure,0)
 

@@ -7,6 +7,7 @@ from backend.actor_client import run_actor
 from backend.config import RAG_BROWSER_ACTOR_ID
 from backend.filters import is_blocked_domain
 from backend.utils import domain_from_url, normalize_url, is_search_destination
+from backend.research_context import JobStopped, LimitReached
 
 _CACHE = {}
 
@@ -98,8 +99,15 @@ def fetch_website_pages(base_url, context):
         if attempts >= context.request.max_pages_per_supplier or context.pages >= context.request.max_pages:
             break
         before = context.pages
-        page = fetch_page(url, context, attempts_left=context.request.max_pages_per_supplier-attempts)
-        attempts += max(1, context.pages-before)
+        try:
+            page = fetch_page(url, context, attempts_left=context.request.max_pages_per_supplier-attempts)
+        except (JobStopped, LimitReached):
+            raise
+        except Exception as exc:
+            context.fetch_failures.append({"url": url, "error_type": type(exc).__name__})
+            page = None
+        finally:
+            attempts += max(1, context.pages-before)
         if page and domain_from_url(page["url"]) == domain:
             pages.append(page)
     return pages

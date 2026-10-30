@@ -17,6 +17,8 @@ def run_research_job(job_id, req):
     accepted, review, rejected = [], [], []
     seen = set()
     resolved = set()
+    identity_attempts = set()
+    retryable_identities = set()
     processed = 0
     observations, coverage, warnings = [], [], []
     master = None
@@ -38,9 +40,13 @@ def run_research_job(job_id, req):
                 break
             url = normalize_url(item["url"])
             domain = domain_from_url(url)
-            if not domain or domain in seen or is_search_destination(url) or is_blocked_domain(domain):
+            hint = (item.get("brand_name") or "").strip().casefold()
+            identity_key = (domain, hint)
+            retry_identity = bool(hint and domain in retryable_identities and identity_key not in identity_attempts)
+            if not domain or (domain in seen and not retry_identity) or is_search_destination(url) or is_blocked_domain(domain):
                 continue
             seen.add(domain)
+            identity_attempts.add(identity_key)
             save()
             try:
                 supplier = process_supplier(req.product, url, context,
@@ -51,7 +57,11 @@ def run_research_job(job_id, req):
                 final_domain = domain_from_url(supplier.get("url", url))
                 if final_domain in resolved:
                     supplier.update(status="review", reason="duplicate_resolved_website")
-                if final_domain:
+                if supplier.get("reason") == "shopping_identity_not_established":
+                    retryable_identities.add(domain)
+                else:
+                    retryable_identities.discard(domain)
+                if final_domain and supplier["status"] == "qualified":
                     resolved.add(final_domain)
                 if supplier["status"] == "qualified":
                     accepted.append(supplier)
@@ -124,8 +134,9 @@ def run_research_job(job_id, req):
             for country in req.allowed_countries or ["United States"]:
                 if enough():
                     break
-                observations = run_google_shopping_discovery(req.product, context, country=country, limit=min(20, req.max_candidate_domains-processed))
-                for item in observations:
+                country_observations = run_google_shopping_discovery(req.product, context, country=country, limit=min(20, req.max_candidate_domains-processed))
+                observations.extend(country_observations)
+                for item in country_observations:
                     if enough():
                         break
                     candidates = run_serp_brand_lookup(item["lookup_hint"], req.product, context, country=country, limit=min(3,req.max_candidate_domains-processed))
