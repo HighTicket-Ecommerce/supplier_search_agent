@@ -137,7 +137,7 @@ def _supported_roles(quote, clause, heading, company, product=""):
     return roles, "specific_role_not_supported"
 
 
-def role_object_spans(role, company, clause):
+def role_object_spans(role, company, clause, heading=""):
     """Extract goods attributed to this company from an already verified clause.
 
     Callers must separately validate role attribution, negation and source
@@ -150,6 +150,8 @@ def role_object_spans(role, company, clause):
     spans = [re.split(r"[.!?;]", clause[match.end():], maxsplit=1)[0].strip()
              for match in re.finditer(actor + modifiers + r"(?:" + verbs + r")\b", clause, re.I)]
     if role == "Manufacturer":
+        if manufacturer_label(clause, company, heading):
+            spans.extend(match[1] for match in re.finditer(r"\bmanufacturer\s+of\s+([^.!?;]+)", clause, re.I))
         if _self_role(clause, actor, "manufacturer"):
             spans.extend(match[1] for match in re.finditer(actor + r"(?:\s+(?:is|are)|'re)\s+(?:[\w-]+\s+){0,8}?manufacturer\s+of\s+([^.!?;]+)", clause, re.I))
         spans.extend(match[1] for match in re.finditer(
@@ -182,7 +184,7 @@ def verify_supplier_role(role, company, evidence, pages, product=""):
                 supported.update(roles)
                 observation = {"source_url": entry["source_url"], "quote": entry["quote"],
                                "supported_roles": sorted(roles), "reason": "specific_role_supported" if role in roles else reason,
-                               "context": clause[:800], "context_truncated": len(clause) > 800}
+                               "context": clause[:800], "heading": heading, "context_truncated": len(clause) > 800}
                 result["observations"].append(observation)
                 if role in roles:
                     result["supporting_evidence"].append(observation)
