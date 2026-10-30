@@ -16,8 +16,9 @@ def normalize_quote(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
-_NEGATED = re.compile(r"\b(?:not|never|no longer)\b.{0,35}\b(?:based|located|headquartered|headquarters|hq|office)\b|"
-                      r"\b(?:headquarters|hq|office)\b.{0,20}\b(?:not|never|no longer)\b", re.I)
+_NEGATION = r"(?:not|never|no longer|aren't|isn't|weren't|wasn't)"
+_NEGATED = re.compile(r"\b" + _NEGATION + r"\b.{0,35}\b(?:based|located|headquartered|headquarters|hq|office)\b|"
+                      r"\b(?:headquarters|hq|office)\b.{0,20}\b" + _NEGATION + r"\b", re.I)
 _NON_LOCATION = re.compile(r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|"
                            r"warehouse|showroom|factory|factories|distribution cent(?:er|re)|"
                            r"fulfil(?:l)?ment|service area|customer|testimonial)\b|"
@@ -33,7 +34,7 @@ _CITY_REGION = re.compile(r"\b[A-Za-z\u00c0-\u024f][A-Za-z\u00c0-\u024f .'\-]{1,
                           r"(?:[A-Z]{2}\b|[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+){0,2}\b)")
 _STREET = re.compile(r"\b\d{1,6}\s+[A-Za-z0-9 .'\-]{1,70}\b"
                     r"(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|boulevard|blvd|line|court|ct|place|pl)\b", re.I)
-_SELF_LOCATION = re.compile(r"\bwe(?:'re|\s+are)\s+(?:an?\s+)?[^.!?]{1,70},\s*[A-Z]{2}\s+"
+_SELF_LOCATION = re.compile(r"\bwe(?:'re|\s+are)\s+(?:an?\s+)?[^.!?]{1,70},\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+"
                            r"(?:manufacturer|company|business)\b", re.I)
 _OFFICE_CONTEXT = re.compile(r"\b(?:our office|office address|headquarters|hq|head office|contact (?:us|[A-Z][\w -]+)|"
                               r"company address|business address)\b", re.I)
@@ -60,7 +61,8 @@ def _contexts(quote, source):
 
 def hq_quote_acceptable(quote, source="", source_url=""):
     quote = normalize_quote(quote)
-    if not quote or _NON_LOCATION.search(quote) or _NEGATED.search(quote):
+    shared_hq = bool(re.search(r"\bour\s+(?:headquarters|hq|head office)\s+and\s+(?:factory|warehouse)\s+(?:are|is)\s+(?:in|at)\b", quote, re.I))
+    if not quote or (_NON_LOCATION.search(quote) and not shared_hq) or _NEGATED.search(quote):
         return False
     explicit_hq = bool(_HEAD_OFFICE.search(quote))
     if _ORIGIN.search(quote) and not explicit_hq:

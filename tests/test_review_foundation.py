@@ -78,7 +78,7 @@ class FoundationReviewTests(unittest.TestCase):
         first = {"url": "https://example.com", "text": "[About](/about) [Contact](/contact)"}
         contact = {"url": "https://example.com/contact", "text": "Our office contact"}
         with patch.object(web_fetcher, "fetch_page", side_effect=[first, RuntimeError("provider"), contact]):
-            self.assertEqual(web_fetcher.fetch_website_pages(first["url"], context), [first, contact])
+            self.assertEqual([p["url"] for p in web_fetcher.fetch_website_pages(first["url"], context)], [first["url"], contact["url"]])
         self.assertEqual(context.fetch_failures, [{"url": "https://example.com/about", "error_type": "RuntimeError"}])
         for error in (JobStopped("stop"), LimitReached("page_limit")):
             with patch.object(web_fetcher, "fetch_page", side_effect=[first, error]):

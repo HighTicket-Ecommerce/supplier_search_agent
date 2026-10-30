@@ -20,7 +20,8 @@ MAX_LINKS = 300
 class PageHTML(HTMLParser):
     """Extract visible text and anchors without executing any page content."""
     HIDDEN = {"script", "style", "noscript", "svg", "template", "iframe"}
-    BLOCKS = {"p", "div", "section", "article", "address", "li", "br", "h1", "h2", "h3", "h4", "footer", "nav", "header"}
+    BLOCKS = {"p", "div", "section", "article", "address", "li", "br", "h1", "h2", "h3", "h4", "footer", "nav", "header",
+              "table", "tr", "th", "td", "dl", "dt", "dd"}
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
