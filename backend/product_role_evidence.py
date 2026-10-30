@@ -11,13 +11,13 @@ from backend.role_evidence import role_object_spans, verify_supplier_role
 
 _PRIMARY = re.compile(r"\b(?:cold[ -]plunges?|ice[ -]baths?)\b", re.I)
 _PURPOSE_OR_OTHER_ACTION = re.compile(
-    r"\b(?:for|used (?:in|with)|compatible with|to (?:cool|power|support|build|make|assemble|create|produce))\b|"
+    r"\b(?:for|powering|used (?:in|with)|compatible with|to (?:cool|power|support|build|make|assemble|create|produce))\b|"
     r"\b(?:and|but|while)\s+(?:\w+\s+){0,3}"
-    r"(?:sell\w*|offer\w*|distribut\w*|resell\w*|suppl\w*|design\w*|manufactur\w*|build\w*|make\w*|own\w*)\b", re.I)
+    r"(?:stock\w*|are\s+(?:authorized\s+)?dealers?|an?\s+(?:authorized\s+)?dealer|sell\w*|offer\w*|distribut\w*|resell\w*|suppl\w*|design\w*|manufactur\w*|build\w*|make\w*|own\w*)\b", re.I)
 _ROLE_CUE = re.compile(r"\b(?:manufactur\w*|produc\w*|build\w*|built|design\w*|engineer\w*|craft\w*|creates?|makes?|owns?|brand)\b", re.I)
 _CONTRACT_CREATION = re.compile(r"\b(?:for (?:other|third[ -]party) (?:brands?|companies)|contract design|design services|private[ -]label|OEM)\b", re.I)
 MAX_RECOVERY_WINDOWS_PER_PAGE = 96
-_COMPONENT_NOUN = re.compile(r"\b(?:chillers?|cooling|filtration|filters?|covers?|hoses?|pumps?|accessor\w*|parts?|components?|compartments?|heaters?|equipment|products?|housings?|enclosures?|liners?|shells?)\b", re.I)
+_COMPONENT_NOUN = re.compile(r"\b(?:lids?|stairs?|handrails?|ozone|compressors?|chillers?|cooling|filtration|filters?|covers?|hoses?|pumps?|accessor\w*|parts?|components?|compartments?|heaters?|equipment|products?|housings?|enclosures?|liners?|shells?)\b", re.I)
 
 
 def _primary_object(role, company, context, heading=""):
@@ -29,7 +29,14 @@ def _primary_object(role, company, context, heading=""):
         for match in _PRIMARY.finditer(subject):
             prefix = re.split(r"[,;]|\b(?:and|including|includes?|such as)\b", subject[:match.start()], flags=re.I)[-1]
             suffix = re.split(r"[,;]|\b(?:with|including|includes?|featuring|and|that|which)\b", subject[match.end():], maxsplit=1, flags=re.I)[0]
-            if not _COMPONENT_NOUN.search(prefix) and not _COMPONENT_NOUN.search(suffix):
+            # A singular category before a coordinated category can modify a
+            # shared component head: 'cold plunge and ice bath chillers'. A
+            # plural primary noun ('cold plunges and chillers') is its own item.
+            remainder = subject[match.end():]
+            shared_component = (not re.search(r"(?:plunges|baths)$", match[0], re.I)
+                and not suffix.strip() and bool(re.match(r"\s*(?:,|and\b)", remainder, re.I))
+                and bool(_COMPONENT_NOUN.search(remainder)))
+            if not shared_component and not _COMPONENT_NOUN.search(prefix) and not _COMPONENT_NOUN.search(suffix):
                 return True, objects
     return False, objects
 
