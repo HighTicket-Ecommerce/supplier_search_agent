@@ -90,17 +90,27 @@ def process_supplier(product, url, context, brand_hint=None, discovery_source=No
     explicitly_requested = domain_from_url(url) in {domain_from_url(u) for u in context.request.shopify_catalogue_urls}
     if context.request.use_shopify_catalogue and (shopify_hint or explicitly_requested):
         try:
-            catalogue = fetch_shopify_catalogue(result["url"], context)
-            context.save_catalogue(result["url"], catalogue)
-            catalogue = analyze_catalogue(catalogue, context)
-            context.save_catalogue(result["url"], catalogue)
-            result["catalogue"] = catalogue
-            result["observed_price_ranges"] = catalogue["observed_price_ranges"]
-            pages.extend(catalogue_evidence_pages(catalogue))
+            catalogue_host = domain_from_url(result["url"])
+            if catalogue_host in context.catalogue_errors:
+                result["catalogue_error"] = context.catalogue_errors[catalogue_host]
+                catalogue = None
+            else:
+                if catalogue_host not in context.catalogue_results:
+                    catalogue = fetch_shopify_catalogue(result["url"], context)
+                    context.save_catalogue(result["url"], catalogue)
+                    catalogue = analyze_catalogue(catalogue, context)
+                    context.save_catalogue(result["url"], catalogue)
+                    context.catalogue_results[catalogue_host] = catalogue
+                catalogue = context.catalogue_results[catalogue_host]
+            if catalogue is not None:
+                result["catalogue"] = catalogue
+                result["observed_price_ranges"] = catalogue["observed_price_ranges"]
+                pages.extend(catalogue_evidence_pages(catalogue))
         except (JobStopped, LimitReached):
             raise
         except Exception as exc:
             result["catalogue_error"] = "catalogue_request_failed:" + type(exc).__name__
+            context.catalogue_errors[catalogue_host] = result["catalogue_error"]
     elif context.request.use_shopify_catalogue:
         result["catalogue_status"] = "not_detected; add this website to the Shopify catalogue list to request it explicitly"
     result["sources"] = [{k: v for k, v in p.items() if k != "text"} for p in pages]

@@ -78,6 +78,22 @@ class FoundationFollowupTests(unittest.TestCase):
         self.assertEqual(model.call_count, 2)
         self.assertEqual(fetch.call_count, 1)
 
+    def test_identity_retries_reuse_catalogue_work_in_the_same_job(self):
+        for failure in (False, True):
+            with self.subTest(failure=failure):
+                context = self.context(use_shopify_catalogue=True, shopify_catalogue_urls=["https://example.com"])
+                pages = [{"url": "https://example.com", "text": "Supplier evidence"}]
+                with patch.object(supplier_validator, "fetch_website_pages", return_value=pages), \
+                     patch.object(supplier_validator, "fetch_shopify_catalogue", side_effect=RuntimeError("failed") if failure else None,
+                                  return_value={"observed_price_ranges": []}) as fetch, \
+                     patch.object(supplier_validator, "analyze_catalogue", side_effect=lambda value, ctx: value) as classify, \
+                     patch.object(supplier_validator, "catalogue_evidence_pages", return_value=[]), \
+                     patch.object(supplier_validator, "analyze_supplier_with_llm", return_value={"error": "offline"}):
+                    for hint in ("A", "B"):
+                        supplier_validator.process_supplier("Sauna heaters", "https://example.com", context, brand_hint=hint)
+                self.assertEqual(fetch.call_count, 1)
+                self.assertEqual(classify.call_count, 0 if failure else 1)
+
     def test_transport_and_http_failures_fall_back_without_policy_bypass(self):
         errors = [public_fetch.urllib3.exceptions.NewConnectionError(None, "refused"),
                   public_fetch.urllib3.exceptions.ReadTimeoutError(None, "/", "timeout"),

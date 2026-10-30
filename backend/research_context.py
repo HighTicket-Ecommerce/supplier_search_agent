@@ -21,6 +21,8 @@ class ResearchContext:
         self.exposure = 0.0
         self.operations = []
         self.catalogues = {}
+        self.catalogue_results = {}
+        self.catalogue_errors = {}
         self.website_pages = {}
         self.website_failures = {}
         self.fetch_failures = []
