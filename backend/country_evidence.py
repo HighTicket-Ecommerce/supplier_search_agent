@@ -39,67 +39,80 @@ def _geography(quote):
     return countries
 
 
+def _location_cards(text, source_url):
+    """Bound location values before geography, preserving adjacent label/address cards."""
+    blocks = [value for part in re.split(r"\n\s*\n", text) if (value := normalize_quote(part))]
+    bare_label = re.compile(r"(?:(?:our|global|corporate|registered|knoxville)\s+)*(?:headquarters|hq|head office|office(?: address)?)[: ]*$", re.I)
+    for index, block in enumerate(blocks):
+        for sentence in re.split(r"(?<=[.!?])\s+(?=[A-Z][a-z])", block):
+            if not _ANCHOR.search(sentence) and location_quote_kind(sentence, text, source_url) != "company_base":
+                continue
+            value = sentence
+            forced_kind = None
+            if bare_label.fullmatch(sentence):
+                forced_kind = "headquarters" if re.search(r"headquarters|hq|head office", sentence, re.I) else "office"
+                values = []
+                for following in blocks[index+1:index+4]:
+                    if bare_label.fullmatch(following):
+                        if forced_kind == "office" and not re.search(r"headquarters|hq|head office", following, re.I):
+                            values.append(following)
+                            continue
+                        break
+                    if _ANCHOR.search(following) or len(following.split()) > 16:
+                        break
+                    # Only address-like values or a short proper place name can bind a label.
+                    if not (re.search(r"\d|,", following) or _geography(following) or
+                            re.fullmatch(r"[A-Z][a-z]+(?: [A-Z][a-z]+){0,2}", following)):
+                        break
+                    if re.search(r"workshop|factory|warehouse|showroom|customer|supplier|partner|products?|services?", following, re.I):
+                        break
+                    values.append(following)
+                if not values:
+                    continue
+                value = " ".join([sentence]+values)
+            # A following market statement is not part of an address value.
+            value = re.split(r"\b(?:we|our company)\s+(?:sell|ship|deliver|serve|supply|distribute|export)\b", value, maxsplit=1, flags=re.I)[0].strip(" ,")
+            kind = location_quote_kind(value, text, source_url)
+            if kind not in HQ_LOCATION_TYPES:
+                # Keep unresolved, explicitly labelled HQ cards (e.g. Singapore).
+                # They can block an office fallback, but cannot qualify a country.
+                if forced_kind and not _geography(value):
+                    kind = forced_kind
+                else:
+                    continue
+            yield index, value, kind
+
+
 def verify_company_location(evidence, pages):
     result = {"status": "not_established", "country": None, "location_type": "unknown",
               "supporting_evidence": [], "observations": [], "source_repair_used": False}
     observations = []
-    seen = set()
     for page_index, page in enumerate(pages):
-        blocks = [value for part in re.split(r"\n\s*\n", page["text"]) if (value := normalize_quote(part))]
-
-        def card(index):
-            if _ANCHOR.search(blocks[index]):
-                return index
-            return next((i for i in range(index-1, max(-1, index-4), -1)
-                         if len(blocks[i]) < 150 and _ANCHOR.search(blocks[i])), index)
-
-        def add(quote, index, origin):
-            quote = normalize_quote(quote)
-            if not quote or len(quote.split()) > 12:
-                return
-            kind = location_quote_kind(quote, page["text"], page["url"])
-            if kind not in HQ_LOCATION_TYPES:
-                return
-            key = (page_index, quote.casefold())
-            if key in seen:
-                return
-            seen.add(key)
-            countries = sorted(_geography(quote))
+        for index, value, kind in list(_location_cards(page["text"], page["url"]))[:256]:
+            # Parse exactly once on the full bound value, never on truncated windows.
+            countries = sorted(_geography(value))
+            candidates = []
+            for entry in evidence:
+                if entry.get("claim") == "country" and entry["source_url"] in {page["url"], page.get("requested_url")}:
+                    quote = normalize_quote(entry["quote"])
+                    if quote and quote.casefold() in value.casefold() and len(quote.split()) <= 12:
+                        candidates.append((quote, entry.get("evidence_origin", "model_quote")))
+            words = value.split()
+            candidates.extend((" ".join(words[start:start+12]), "captured_source_location_repair")
+                              for start in range(min(128, max(1, len(words)))))
+            usable = [(quote, origin) for quote, origin in candidates if
+                      sorted(_geography(quote)) == countries and
+                      location_quote_kind(quote, page["text"], page["url"]) == kind]
+            if usable:
+                quote, origin = min(usable, key=lambda row: (row[1] != "model_quote", len(row[0].split())))
+            else:
+                quote, origin = " ".join(words[:12]), "captured_source_location_repair"
             observations.append({"claim": "country", "source_url": page["url"], "quote": quote,
+                "location_value": value[:2000], "quote_usable": bool(usable),
                 "location_type": kind, "countries": countries, "evidence_origin": origin,
-                "card_id": [page_index, card(index)],
-                "reason": "country_supported_by_location" if len(countries) == 1 else
-                          "conflicting_geography" if countries else "location_geography_not_established"})
-
-        # Retain model quotes when usable, but derive their country independently.
-        joined = " ".join(blocks)
-        for entry in evidence:
-            if entry.get("claim") != "country" or entry["source_url"] not in {page["url"], page.get("requested_url")}:
-                continue
-            needle = normalize_quote(entry["quote"])
-            if not needle or needle.casefold() not in joined.casefold():
-                continue
-            index = next((i for i, block in enumerate(blocks) if needle.casefold() in block.casefold()), 0)
-            add(needle, index, entry.get("evidence_origin", "model_quote"))
-
-        # Scan only location-bearing blocks and their adjacent address values.
-        scanned = 0
-        indices = [i for i, block in enumerate(blocks) if _ANCHOR.search(block) or
-                   any(_ANCHOR.search(old) for old in blocks[max(0, i-3):i])]
-        for index in indices:
-            words = blocks[index].split()
-            starts = list(range(min(96, max(1, len(words)-11))))
-            # Long blocks may contain the label after navigation text.
-            for match in _ANCHOR.finditer(blocks[index]):
-                position = len(blocks[index][:match.start()].split())
-                starts.extend(range(max(0, position-3), position+1))
-            for start in dict.fromkeys(starts):
-                add(" ".join(words[start:start+12]), index, "captured_source_location_repair")
-                scanned += 1
-                if scanned >= 256:
-                    break
-            if scanned >= 256:
-                break
+                "card_id": [page_index, index],
+                "reason": "country_supported_by_location" if len(countries) == 1 and usable else
+                          "conflicting_geography" if len(countries) > 1 else "location_geography_not_established"})
 
     result["observations"] = observations
     if not observations:
@@ -113,7 +126,7 @@ def verify_company_location(evidence, pages):
         return result
     unresolved = {tuple(e["card_id"]) for e in top if not e["countries"]}
     resolved = {tuple(e["card_id"]) for e in top if len(e["countries"]) == 1}
-    if not countries or unresolved-resolved:
+    if not countries or unresolved-resolved or any(not e["quote_usable"] for e in top):
         return result
     result["status"], result["country"] = "supported", next(iter(countries))
     support = [e for e in top if e["countries"] == [result["country"]]]
