@@ -6,7 +6,7 @@ Those still require the supplier analysis and its official source.
 import re
 import unicodedata
 from urllib.parse import urlsplit
-from backend.location_text import SELF_LOCATION_RE
+from backend.location_text import SELF_LOCATION_RE, NEGATION
 
 
 def normalize_quote(value):
@@ -17,7 +17,7 @@ def normalize_quote(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
-_NEGATION = r"(?:not|never|no longer|aren't|isn't|weren't|wasn't)"
+_NEGATION = NEGATION
 _NEGATED = re.compile(r"\b" + _NEGATION + r"\b.{0,35}\b(?:based|located|headquartered|headquarters|hq|office)\b|"
                       r"\b(?:headquarters|hq|office)\b.{0,20}\b" + _NEGATION + r"\b", re.I)
 _NON_LOCATION = re.compile(r"\b(?:shipping|ships?|shipped|deliver(?:s|y|ies)?|billing|returns?|"

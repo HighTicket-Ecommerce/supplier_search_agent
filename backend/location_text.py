@@ -5,6 +5,8 @@ not supplier-specific hints, and preserve Unicode spellings.
 """
 import re
 
+NEGATION = r"(?:not|never|no longer|cannot|\w+n['’]t)"
+
 US_CODES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split()
 CA_CODES = "AB BC MB NB NL NS NT NU ON PE QC SK YT".split()
 US_NAMES = ("Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|"
