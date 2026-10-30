@@ -55,3 +55,14 @@ class LocationFollowupTests(unittest.TestCase):
             self.assertEqual(location_evidence.location_quote_kind(quote, source), 'company_base')
         source = 'Located in Toronto, Ontario, our factory produces heaters.'
         self.assertEqual(location_evidence.location_quote_kind('Located in Toronto, Ontario', source), 'factory')
+
+    def test_shipping_paragraph_is_not_an_hq_label(self):
+        quote = 'Our headquarters are in Toronto, Ontario.'
+        sources = ['Shipping and returns available across North America.\n\n'+quote,
+                   '<div>Free shipping across Canada</div><p>'+quote+'</p>',
+                   '<p><a href="/returns">Returns and exchanges</a></p><p>'+quote+'</p>']
+        from backend.web_fetcher import PageHTML
+        for source in sources:
+            if '<' in source:
+                parser = PageHTML(); parser.feed(source); source = ''.join(parser.parts)
+            self.assertEqual(location_evidence.location_quote_kind(quote, source), 'headquarters')

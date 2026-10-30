@@ -54,6 +54,8 @@ def _location_label(text):
     # Only nearby label/value blocks may lend context to a clipped location quote.
     if len(text) > 80 or len(text.split()) > 8 or _STREET.search(text) or _CITY_REGION.search(text):
         return False
+    if _site_kind(text) == "shipping_or_returns":
+        return bool(re.fullmatch(r"(?:shipping|returns?|billing|delivery)(?: address)?\s*[:|#-]?", text, re.I))
     return bool(_site_kind(text) or _HEAD_OFFICE.search(text) or _OFFICE_CONTEXT.search(text))
 
 
