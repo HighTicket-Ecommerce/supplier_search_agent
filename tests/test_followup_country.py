@@ -32,3 +32,10 @@ class CountryFollowupTests(unittest.TestCase):
                 result=self.check(text)
                 self.assertEqual((result['status'],result['country'],result['location_type']),('not_established',None,'headquarters'),result)
         self.assert_country('HQ\n\nCanada\n\nOffice: Kent, WA 98032','Canada','headquarters')
+
+    def test_current_headquarters_survives_separate_future_office_clauses(self):
+        head='Our headquarters are in Toronto, Ontario'
+        for tail in [', and our new office will be in Germany.', '; our new office will be in Germany.',
+                     '\nOur new office will be in Germany.', '<br>Our new office will be in Germany.',
+                     ' (new office opening soon in Germany).', '; our office will be in Germany.']:
+            with self.subTest(tail=tail): self.assert_country(head+tail,'Canada','headquarters')
