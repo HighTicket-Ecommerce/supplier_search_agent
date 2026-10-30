@@ -39,7 +39,7 @@ def _subjects(company):
 
 def _has_goods(text, product=""):
     primary = re.split(r"\b(?:for|that|which|with|to)\b", text, maxsplit=1, flags=re.I)[0]
-    if re.search(r"\b(?:services?|websites?|software|consulting|relationships?|experiences?|content|trust)\b", primary, re.I):
+    if re.search(r"\b(?:services?|websites?|software|consulting|relationships?|experiences?|content|trust|tours?|trails?|tracks?|workshops?|films?|events?|communities|community)\b", primary, re.I):
         return False
     if _GOODS.search(primary):
         return True

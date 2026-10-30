@@ -31,3 +31,14 @@ class RoleFollowupTests(unittest.TestCase):
                     row=fixture.check_supplier([text],body='Example\n\n'+text)
                     self.assertEqual(row['status'],'review')
         finally: fixture.tearDown()
+
+    def test_product_modifiers_cannot_turn_services_into_physical_goods(self):
+        for text,role,product in [
+            ('We design bicycle tours across Europe','Brand owner','bicycles'),
+            ('We build bicycle trails and pump tracks','Manufacturer','bicycles'),
+            ('We create ceramic workshops for kids','Brand owner','Ceramic planters'),
+            ('We produce kayak films and events','Manufacturer','kayaks'),
+            ('We build bicycle communities','Manufacturer','bicycles')]:
+            with self.subTest(text=text):
+                status,recovery=self.check(text,role,product)
+                self.assertEqual(status,'not_established'); self.assertFalse(recovery)
