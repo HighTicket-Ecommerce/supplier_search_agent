@@ -29,6 +29,7 @@ def main():
     from backend.job_store import get_job, init_job
     from backend.models import ResearchRequest
     from backend.research_runner import run_research_job
+    from backend.config import model_settings_snapshot
 
     request = ResearchRequest(product=cases["product"], candidate_urls=[c["url"] for c in cases["cases"]],
         allowed_countries=["United States", "Canada"], allowed_supplier_types=["Distributor"],
@@ -38,7 +39,7 @@ def main():
         max_pages=6, max_pages_per_supplier=3, max_external_calls=12,
         max_runtime_seconds=600, max_execution_cost_usd=4, max_actor_charge_usd=0.5)
     sources = sorted(ROOT.glob("backend/*.py")) + [Path(__file__).resolve(), cases_path, cases_path.with_name("brief.md")]
-    manifest = {"started_at": time.time(), "settings": request.model_dump(),
+    manifest = {"started_at": time.time(), "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "case_ids": [c["id"] for c in cases["cases"]],
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources},

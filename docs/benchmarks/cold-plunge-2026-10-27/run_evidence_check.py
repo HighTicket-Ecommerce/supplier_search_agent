@@ -43,6 +43,7 @@ def main():
     from backend.research_runner import run_research_job
     from backend import web_fetcher
     from backend.master_index import load_reference
+    from backend.config import model_settings_snapshot
     if args.master_reference_id:
         load_reference(args.master_reference_id)
     request = ResearchRequest(product=labels["product"], candidate_urls=[lookup[i]["url"] for i in args.cases],
@@ -57,7 +58,7 @@ def main():
     sources = ["backend/web_fetcher.py", "backend/location_evidence.py", "backend/country_evidence.py", "backend/product_evidence.py", "backend/role_evidence.py", "backend/supplier_validator.py",
                "backend/models.py", "backend/model_client.py", "backend/research_runner.py", "backend/actor_client.py",
                "docs/benchmarks/cold-plunge-2026-10-27/run_evidence_check.py"]
-    manifest = {"started_at": time.time(), "case_ids": args.cases, "settings": request.model_dump(),
+    manifest = {"started_at": time.time(), "case_ids": args.cases, "settings": request.model_dump(), "model_settings": model_settings_snapshot(),
         "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "source_sha256": {path: hashlib.sha256((ROOT/path).read_bytes()).hexdigest() for path in sources},
         "labels_sha256": hashlib.sha256(labels_path.read_bytes()).hexdigest(),
