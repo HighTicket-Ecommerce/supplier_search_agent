@@ -9,9 +9,9 @@ from backend.location_evidence import normalize_quote
 
 
 _CUES = re.compile(r"\b(?:manufactur\w*|produc(?:e|es|ed|tion|ing)|build\w*|built|handbuilt|craft\w*|design\w*|engineer\w*|"
-                   r"brands?|own\w*|creates?|make|distribut\w*|wholesal\w*|retail\w*|resell\w*|suppl\w*|"
+                   r"brands?|own\w*|creates?|makes?|distribut\w*|wholesal\w*|retail\w*|resell\w*|suppl\w*|"
                    r"marketplace|publish\w*|reviews?|blog|media)\b", re.I)
-_GOODS = re.compile(r"\b(?:products?|goods|equipment|systems?|heaters?|saunas?|tubs?|plunges?|chillers?|"
+_GOODS = re.compile(r"\b(?:products?|goods|equipment|systems?|heaters?|saunas?|tubs?|plunges?|ice[ -]baths?|chillers?|"
                     r"grills?|devices?|furniture|appliances?|components?|bicycles?|(?:e[ -]|cargo |road )?bikes?|kayaks?)\b", re.I)
 _UNSUPPORTED = re.compile(r"\b(?:not|never|no longer|don't|doesn't|didn't|isn't|aren't|cannot|can't|won't|haven't|hasn't|previously|formerly|used to|plan to|planning to|"
                           r"hope to|aim to|want to|will|would|could|might|should)\b", re.I)
@@ -72,6 +72,18 @@ def _passages(quote, source):
             yield block[start:end], heading
 
 
+def _manufacturer_description(clause, company):
+    actor, named = _subjects(company)
+    # A copula/appositive attaches the role noun to the named company. Reject
+    # embedded relationships (dealer of a manufacturer, products from one).
+    pattern = (r"(?:" + actor + r"(?:\s+(?:is|are)|'re)\s+|" + named + r",\s*)"
+               r"(?P<description>[^.!?;,:]{0,100}?)\bmanufacturer\b(?!'s)")
+    match = re.search(pattern, clause, re.I)
+    if match and not re.search(r"\b(?:of|from|for|dealer|retailer|supplier|representative|agent|stock|stocks)\b", match['description'], re.I):
+        return match
+    return None
+
+
 def manufacturer_label(clause, company, heading="", product=""):
     actor, named = _subjects(company)
     # A label's value must identify this company. Under a company heading a
@@ -80,7 +92,7 @@ def manufacturer_label(clause, company, heading="", product=""):
     tagline = re.fullmatch(
         r"(?:(?:a|an|the|trusted|leading|professional|independent|Canadian|American)\s+){0,8}"
         r"manufacturer(?:\s+(?:of|since)\s+[^.!?]+)?[.!]?", clause, re.I)
-    label = (_self_role(clause, actor, "manufacturer(?!'s)") or direct_label or
+    label = (_manufacturer_description(clause, company) or _self_role(clause, actor, "manufacturer(?!'s)") or direct_label or
              re.search(named + r",\s*(?:as\s+)?an?\s+manufacturer\b", clause, re.I) or
              (re.search(named, heading, re.I) and len(clause) < 160 and tagline and not re.search(r"\b(?:is|are|supplies|stocks|sells|provides)\b", clause, re.I)))
     title = re.match(named + r"\s+([^.!?;:,]{0,70})\bmanufacturer\b", clause, re.I)
@@ -115,12 +127,12 @@ def _supported_roles(quote, clause, heading, company, product=""):
     explicit_brand = (_self_role(clause, actor, "brand(?: owner)?") or
                       bool(_OUR_BRAND.search(clause)) or
                       _action(clause, actor, r"owns?\s+(?:the\s+)?[^.!?;]{0,50}\bbrand"))
-    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?", physical_object=True, product=product) or
+    own_design = ((_action(clause, actor, r"designs?|engineers?|crafts?|creates?|makes?", physical_object=True, product=product) or
                    re.search(r"\bevery product we (?:make|create)\b", clause, re.I)) and goods and
                   not _CONTRACT.search(clause) and not _NON_GOODS_OBJECT.search(clause))
     own_line = maker and bool(re.search(r"\bour (?:own )?(?:products?|line|brand)\b", clause, re.I))
     brand_service = re.search(r"\bbrand\s+(?:consultancy|consultant|agency|partner|directory|representative)\b", clause, re.I)
-    if re.search(r"\b(?:brand\w*|own\w*|design\w*|engineer\w*|craft\w*|creates?|make)\b", quote, re.I) and (explicit_brand or own_design or own_line) and not brand_service:
+    if re.search(r"\b(?:brand\w*|own\w*|design\w*|engineer\w*|craft\w*|creates?|makes?)\b", quote, re.I) and (explicit_brand or own_design or own_line) and not brand_service:
         roles.add("Brand owner")
     supply = _action(clause, actor, r"distributes?|suppl(?:y|ies)|wholesale[sd]?|sells?") or _self_role(clause, actor, "distributor")
     distribution = re.search(r"\bauthorized distributor of\s+(?!our\b)(\w[^.!?;]*)", clause, re.I)
@@ -137,6 +149,33 @@ def _supported_roles(quote, clause, heading, company, product=""):
     return roles, "specific_role_not_supported"
 
 
+def role_object_spans(role, company, clause, heading=""):
+    """Extract goods attributed to this company from an already verified clause.
+
+    Callers must separately validate role attribution, negation and source
+    locality. Share the company-subject grammar with those checks.
+    """
+    actor, _ = _subjects(company)
+    modifiers = r"\s+(?:(?:also|proudly|personally|directly|locally)\s+){0,3}"
+    verbs = (r"(?:designs?\s+(?:and|&)\s+)?(?:manufactur(?:e|es)|produc(?:e|es)|builds?|handbuilds?)"
+             if role == "Manufacturer" else r"designs?|engineers?|crafts?|creates?|makes?|owns?")
+    spans = [re.split(r"[.!?;]", clause[match.end():], maxsplit=1)[0].strip()
+             for match in re.finditer(actor + modifiers + r"(?:" + verbs + r")\b", clause, re.I)]
+    if role == "Manufacturer":
+        description = _manufacturer_description(clause, company)
+        if description:
+            spans.append(description['description'])
+        if manufacturer_label(clause, company, heading):
+            spans.extend(match[1] for match in re.finditer(r"\bmanufacturer\s+of\s+([^.!?;]+)", clause, re.I))
+        if _self_role(clause, actor, "manufacturer"):
+            spans.extend(match[1] for match in re.finditer(actor + r"(?:\s+(?:is|are)|'re)\s+(?:[\w-]+\s+){0,8}?manufacturer\s+of\s+([^.!?;]+)", clause, re.I))
+        spans.extend(match[1] for match in re.finditer(
+            r"([^.!?;]+?)\s+(?:is|are)\s+(?:manufactured|produced|built)\b.{0,25}\bin our\b.{0,35}\b(?:facility|factory|workshop)\b", clause, re.I))
+    elif role == "Brand owner":
+        spans.extend(match[1] for match in re.finditer(r"\bour (?:own )?brand\s+of\s+([^.!?;]+)", clause, re.I))
+    return spans
+
+
 def verify_supplier_role(role, company, evidence, pages, product=""):
     result = {"status": "not_established", "claimed_role": role, "supported_roles": [],
               "supporting_evidence": [], "observations": []}
@@ -146,16 +185,21 @@ def verify_supplier_role(role, company, evidence, pages, product=""):
             continue
         quote = normalize_quote(entry["quote"])
         found = False
+        seen_passages = set()
         for page in pages:
             if entry["source_url"] not in {page["url"], page.get("requested_url")}:
                 continue
             for clause, heading in _passages(quote, page["text"]):
                 found = True
+                key = (page["url"], clause, heading)
+                if key in seen_passages:
+                    continue
+                seen_passages.add(key)
                 roles, reason = _supported_roles(quote, clause, heading, company, product)
                 supported.update(roles)
                 observation = {"source_url": entry["source_url"], "quote": entry["quote"],
                                "supported_roles": sorted(roles), "reason": "specific_role_supported" if role in roles else reason,
-                               "context": clause[:800]}
+                               "context": clause[:800], "heading": heading, "context_truncated": len(clause) > 800}
                 result["observations"].append(observation)
                 if role in roles:
                     result["supporting_evidence"].append(observation)
