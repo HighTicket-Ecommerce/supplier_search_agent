@@ -6,6 +6,8 @@ import socket
 import tempfile
 from types import SimpleNamespace
 import unittest
+import httpx
+from openai import OpenAI
 import pandas as pd
 import requests
 from unittest.mock import MagicMock, patch
@@ -17,9 +19,9 @@ os.environ["SUPPLIER_API_KEY"] = "offline-test-api-key"
 os.environ["SUPPLIER_UI_PASSWORD"] = ""
 
 from fastapi.testclient import TestClient
-from backend import main, config, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner, utils
+from backend import main, config, job_store, research_runner, supplier_validator, web_fetcher, actor_client, apify_runner, utils, model_client
 from backend.google_shopping_runner import normalize_shopping_items
-from backend.models import ResearchRequest
+from backend.models import ResearchRequest, SupplierAnalysis
 from backend.research_context import ResearchContext, LimitReached, JobStopped
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -215,6 +217,24 @@ class ResearchTests(unittest.TestCase):
         self.assertGreater(context.exposure, 0)
         self.assertEqual(context.operations[0]["status"], "completed")
 
+    def test_openai_sdk_round_trip_parses_structured_output(self):
+        context = self.context()
+        sent = []
+        def handler(request):
+            sent.append(json.loads(request.content))
+            return httpx.Response(200, json={"id": "chatcmpl-fixture", "object": "chat.completion", "created": 0,
+                "model": config.OPENAI_MODEL, "usage": {"prompt_tokens": 50, "completion_tokens": 100, "total_tokens": 150},
+                "choices": [{"index": 0, "finish_reason": "stop", "logprobs": None,
+                             "message": {"role": "assistant", "content": json.dumps(CASES[0]["analysis"]), "refusal": None}}]})
+        sdk = OpenAI(api_key="offline-test-key", max_retries=0, http_client=httpx.Client(transport=httpx.MockTransport(handler)))
+        with patch.object(model_client, "client", sdk):
+            result = model_client.request_structured([{"role": "user", "content": "fixture"}], SupplierAnalysis, context,
+                                                     schema_name="supplier_analysis")
+        self.assertEqual(result, SupplierAnalysis.model_validate(CASES[0]["analysis"]).model_dump())
+        self.assertTrue(sent[0]["response_format"]["json_schema"]["strict"])
+        self.assertEqual(sent[0]["max_completion_tokens"], config.OPENAI_MAX_OUTPUT_TOKENS)
+        self.assertFalse(sent[0]["store"])
+
     def test_excerpts_preserve_late_email(self):
         pages = [{"url":"https://fixture.example", "text":"Navigation "*1000+" sales@fixture.example"}]
         result = web_fetcher.prompt_pages(pages, "Sauna")
@@ -352,7 +372,7 @@ class ResearchTests(unittest.TestCase):
             else:response.json.return_value=result
             return response
         with patch("requests.request",side_effect=request):
-            ui=AppTest.from_file("ui/streamlit_app.py").run(timeout=10)
+            ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
             next(x for x in ui.text_input if x.label=="Product").set_value("Sauna heaters")
             ui.text_area[0].set_value("https://fixture.example")
             next(x for x in ui.checkbox if x.label=="Discover additional suppliers").uncheck()
@@ -367,7 +387,7 @@ class ResearchTests(unittest.TestCase):
     def test_streamlit_password_gate_blocks_until_correct(self):
         from streamlit.testing.v1 import AppTest
         with patch.dict(os.environ,{"SUPPLIER_UI_PASSWORD":"correct horse battery"}), patch("requests.request") as request:
-            ui=AppTest.from_file("ui/streamlit_app.py").run(timeout=10)
+            ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
             self.assertEqual([w.label for w in ui.selectbox],[])
             ui.text_input[0].set_value("wrong").run(timeout=10)
             self.assertIn("Incorrect password.",[e.value for e in ui.error])
@@ -382,7 +402,7 @@ class ResearchTests(unittest.TestCase):
             response=requests.Response();response.status_code=401;response.url=url
             return response
         with patch("requests.request",side_effect=request):
-            ui=AppTest.from_file("ui/streamlit_app.py").run(timeout=10)
+            ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
             next(b for b in ui.button if b.label=="Load saved master lists").click().run(timeout=10)
         self.assertFalse(ui.exception)
         self.assertTrue(any("rejected the API key" in e.value for e in ui.error))

@@ -103,6 +103,8 @@ For Sheets export, configure the existing Google service-account credentials and
 python -m unittest discover -s tests -v
 ```
 
+GitHub Actions runs the same suite plus `pip-audit` on every push to `main` and every pull request. The workflow has read-only permissions and pins Actions to commit hashes.
+
 Tests use temporary SQLite databases/references, mocked actor/model/Sheets calls and a network guard. They cover captured Shopping/Shopify/directory schemas, real supplier-page pilot fixtures, master identity traps, product/variant/currency checks, malformed output, citations, market targeting, shared limits, partial catalogue durability, stop/abort behavior, explicit exports, API-key and UI-password checks, spreadsheet-safe CSV values and all three Streamlit workflows. Fixture model responses are mocked, not a live accuracy estimate.
 
 ## Remaining work
