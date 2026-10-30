@@ -1,4 +1,6 @@
 import os
+import sys
+from pathlib import Path
 import csv
 import hmac
 import time
@@ -6,6 +8,11 @@ import requests
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+# Streamlit's console launcher adds ui/, so expose sibling shared helpers too.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from backend.master_index import parse_supplier_csv
 from backend.utils import spreadsheet_safe
 
