@@ -1,5 +1,7 @@
 # Accessory-page selection fix — 2026-10-27
 
+Later follow-up: [HQ/location-context validation](headquarters-context-results.md) keeps BlueCube in HQ review and verifies LeisureCraft's head office while flagging its unproven complete-system configuration. This document preserves the earlier page-selection result.
+
 **Penguin now qualifies from complete-system evidence instead of spending its last page on a replacement filter.** Redwood remains qualified in the live control. This is a targeted development check, not a new complete benchmark result.
 
 Code: `7c440a2853d15c985df81eac1586253c767eb93d`, branch `fix/product-page-selection`, based on `d12579d`. The [preceding 16-case report](development-rerun-results.md) remains the full-cohort result for its earlier version.

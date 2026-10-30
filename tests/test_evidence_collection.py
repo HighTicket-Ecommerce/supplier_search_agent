@@ -232,7 +232,7 @@ class EvidenceCollectionTests(unittest.TestCase):
         self.assertEqual(issues[0]["reason"], "quote_does_not_establish_company_location")
 
     def test_long_literal_office_quote_is_shortened_without_losing_its_context(self):
-        quote = "Visit us in central Oregon — 1104 SE Lake Rd Ste. 101, Redmond, OR 97756."
+        quote = "Our office address in central Oregon is 1104 SE Lake Rd Ste. 101, Redmond, OR 97756."
         pages = [{"url":"https://example.com/contact", "text":quote}]
         evidence = [{"claim":"country","source_url":pages[0]["url"],"quote":quote}]
         valid, ok = supplier_validator.validate_evidence(evidence,pages)
@@ -242,6 +242,108 @@ class EvidenceCollectionTests(unittest.TestCase):
         self.assertIn("1104 SE Lake Rd", valid[0]["quote"])
         self.assertTrue(supplier_validator.quote_in_source(valid[0]["quote"],quote))
         self.assertEqual(valid[0]["original_quote"],supplier_validator._norm_quote(quote))
+        self.assertEqual(valid[0]["location_type"], "office")
+
+    def test_bluecube_workshop_address_cannot_establish_headquarters(self):
+        url = "https://bluecubebaths.com/pages/contact"
+        text = ("Visit us in central Oregon — 1104 SE Lake Rd Ste. 101, Redmond, OR 97756. "
+                "Experience contrast therapy with adjustable flow rates, tour our workshop, "
+                "and see the craftsmanship behind every BlueCube.")
+        for quote in ["Visit us in central Oregon — 1104 SE Lake Rd",
+                      "1104 SE Lake Rd Ste. 101, Redmond, OR 97756", text]:
+            with self.subTest(quote=quote):
+                issues = []
+                valid, _ = supplier_validator.validate_evidence(
+                    [{"claim": "country", "source_url": url, "quote": quote}],
+                    [{"url": url, "text": text}], diagnostics=issues)
+                self.assertEqual(valid, [])
+                self.assertEqual(issues[0]["location_type"], "workshop")
+
+    def test_contact_path_and_generic_contact_heading_do_not_make_an_office(self):
+        quote = "318448 8th Line NE Melancthon, ON Canada"
+        for path in ["contact", "about", "company", "locations"]:
+            for prefix in ["", "Contact Us\n\n", "Company Address\n\n", "Office Hours\n\nMon-Fri 9-5\n\n"]:
+                with self.subTest(path=path, prefix=prefix):
+                    self.assertFalse(hq_quote_acceptable(quote, prefix + quote, "https://example.com/" + path))
+
+    def test_office_and_headquarters_phrases_still_need_an_actual_location(self):
+        for quote in ["Call us at our office", "Visit our office in person", "Headquarters: Our team",
+                      "Our headquarters is in the building", "Our office hours are 9-5"]:
+            with self.subTest(quote=quote):
+                self.assertFalse(hq_quote_acceptable(quote, quote, "https://example.com/contact"))
+
+    def test_location_types_preserve_explicit_offices_and_hq_cards(self):
+        cases = [
+            ("Headquarters San Diego, California", "Headquarters\n\nSan Diego, California", "headquarters"),
+            ("coldture hq is in vaughan, ontario", "coldture hq is in vaughan, ontario", "headquarters"),
+            ("10315 Cogdill Rd Knoxville, TN 37932", "Office Address\n\nKnoxville Office\n\n10315 Cogdill Rd\n\nKnoxville, TN 37932", "office"),
+            ("Office Address 20730 72nd Ave S, Kent, WA 98032", "Office Address\n\n20730 72nd Ave S, Kent, WA 98032", "office"),
+            ("Melancthon, ON Canada, L9V 2K3", "Head Office & Manufacturing\nLeisurecraft\n\n318448 8th Line NE\nMelancthon, ON\nCanada, L9V 2K3", "headquarters"),
+            ("Based in Surrey, BC", "Based in Surrey, BC, we ship worldwide.", "company_base"),
+        ]
+        for quote, text, kind in cases:
+            with self.subTest(quote=quote):
+                valid, _ = supplier_validator.validate_evidence(
+                    [{"claim": "country", "source_url": "https://example.com/", "quote": quote}],
+                    [{"url": "https://example.com/", "text": text}])
+                self.assertEqual(len(valid), 1)
+                self.assertEqual(valid[0]["location_type"], kind)
+
+    def test_office_or_hq_heading_does_not_leak_to_another_location(self):
+        quote = "555 Production Rd, Vancouver, BC"
+        for text in [
+            "Headquarters\n\nToronto, Ontario\n\nWorkshop\n\n" + quote,
+            "Our Office\n\n111 Business Rd, Toronto, ON\n\n" + quote,
+            "Headquarters: Toronto, Ontario.\n\nLearn more about our products.\n\n" + quote,
+        ]:
+            with self.subTest(text=text):
+                self.assertFalse(hq_quote_acceptable(quote, text, "https://example.com/contact"))
+
+    def test_production_sites_and_clipped_based_in_statements_do_not_prove_hq(self):
+        for kind in ["workshop", "factory", "showroom", "warehouse", "distribution center"]:
+            source = "Our " + kind + " is based in Toronto, Ontario."
+            with self.subTest(kind=kind):
+                self.assertFalse(hq_quote_acceptable("based in Toronto, Ontario", source, "https://example.com/about"))
+        for statement in ["Our office is in Toronto, Ontario", "Our headquarters are in Toronto, Ontario"]:
+            self.assertTrue(hq_quote_acceptable(statement, statement + ".\n\nVisit our workshop in Vancouver, BC.", "https://example.com/"))
+
+    def test_workshop_only_supplier_stays_in_review_despite_model_hq_claim(self):
+        url = "https://example.com/contact"
+        quote = "1104 SE Lake Rd, Redmond, OR 97756"
+        text = ("We manufacture cold plunge systems. Integrated chiller included in the plunge tub. "
+                "[System](https://example.com/products/plunge)\n\nWorkshop\n\n" + quote)
+        analysis = {"is_product_company": True, "company_name": "Example", "supplier_type": "Manufacturer", "owns_brand": True,
+            "product_match": "supported", "product_kind": "primary", "matched_product_urls": ["https://example.com/products/plunge"],
+            "country": "United States", "country_basis": "headquarters", "identity_match": "not_requested", "email": None, "phone": None,
+            "confidence": 0.9, "notes": "Synthetic regression", "evidence": [
+                {"claim": "role", "source_url": url, "quote": "We manufacture cold plunge systems"},
+                {"claim": "product_match", "source_url": url, "quote": "Integrated chiller included in the plunge tub"},
+                {"claim": "country", "source_url": url, "quote": quote}]}
+        context = self.context(allowed_countries=["United States"])
+        with patch.object(supplier_validator, "fetch_website_pages", return_value=[{"url": url, "text": text}]), \
+             patch.object(supplier_validator, "analyze_supplier_with_llm", return_value=analysis):
+            result = supplier_validator.process_supplier(context.request.product, url, context)
+        self.assertEqual(result["status"], "review")
+        self.assertEqual(result["reason"], "headquarters_not_established")
+        self.assertEqual(result["evidence_issues"][0]["location_type"], "workshop")
+        self.assertEqual({e["claim"] for e in result["evidence"]}, {"role", "product_match"})
+
+    def test_unlabelled_footer_address_routes_to_contact_without_becoming_hq(self):
+        context = self.context(max_pages_per_supplier=3, max_pages=3)
+        home = {"url": "https://example.com/", "text": "318448 8th Line NE\nMelancthon, ON\nCanada", "links": [
+            {"url": "https://example.com/about", "label": "About"},
+            {"url": "https://example.com/contact", "label": "Contact"},
+            {"url": "https://example.com/products/cold-plunge", "label": "Plunge"}]}
+        contact = {"url": "https://example.com/contact", "text": home["text"]}
+        product = {"url": "https://example.com/products/cold-plunge", "text": "Tub with included chiller"}
+        def fetch(url, ctx, **kwargs):
+            ctx.take_page()
+            return {p["url"]: p for p in [home, contact, product]}[url]
+        with patch.object(web_fetcher, "fetch_page", side_effect=fetch) as call:
+            web_fetcher.fetch_website_pages(home["url"], context)
+        self.assertEqual([c.args[0] for c in call.call_args_list], [home["url"], contact["url"], product["url"]])
+        self.assertFalse(hq_quote_acceptable(home["text"], contact["text"], contact["url"]))
+        self.assertEqual(context.pages, 3)
 
     def test_long_nonliteral_or_non_hq_quotes_cannot_be_repaired_into_hq(self):
         cases = [
@@ -298,7 +400,8 @@ class EvidenceCollectionTests(unittest.TestCase):
 
     def test_street_address_requires_office_context_and_rejects_return_address(self):
         quote = "1104 SE Lake Rd Ste. 101, Redmond, OR 97756"
-        self.assertTrue(hq_quote_acceptable(quote, quote, "https://example.com/contact"))
+        self.assertFalse(hq_quote_acceptable(quote, quote, "https://example.com/contact"))
+        self.assertTrue(hq_quote_acceptable(quote, "Office Address\n\n" + quote, "https://example.com/contact"))
         self.assertFalse(hq_quote_acceptable(quote, quote, "https://example.com/products/plunge"))
         self.assertFalse(hq_quote_acceptable(quote, "Return shipping address: "+quote, "https://example.com/contact"))
         self.assertFalse(hq_quote_acceptable("Toronto, Ontario", "Our warehouse is in Toronto, Ontario", "https://example.com/about"))
