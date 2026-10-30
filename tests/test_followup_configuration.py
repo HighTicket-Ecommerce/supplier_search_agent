@@ -15,3 +15,9 @@ class ConfigurationFollowupTests(unittest.TestCase):
             ('Complete system - optional upgrades available','Includes tub and chiller')]:
             with self.subTest(heading=heading):
                 self.assertEqual(self.check(heading+'\n\n'+quote,quote),'supported')
+
+    def test_exclusion_and_compatibility_headings_do_not_supply_components(self):
+        for heading in ['Does not include', "Doesn't include", "What isn't included", "Doesn't come with", 'Does not come with', 'Never included', 'Pairs well with']:
+            with self.subTest(heading=heading):
+                self.assertEqual(self.check(heading+'\n\nTub and chiller', 'Tub and chiller'),'not_established')
+        self.assertEqual(self.check('Included\n\nTub and chiller','Tub and chiller'),'supported')
