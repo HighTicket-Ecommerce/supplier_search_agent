@@ -39,3 +39,14 @@ class CountryFollowupTests(unittest.TestCase):
                      '\nOur new office will be in Germany.', '<br>Our new office will be in Germany.',
                      ' (new office opening soon in Germany).', '; our office will be in Germany.']:
             with self.subTest(tail=tail): self.assert_country(head+tail,'Canada','headquarters')
+
+    def test_lower_layer_location_repairs_flow_through_country_resolution(self):
+        for text in ["We are a small, local business.\n\nWe're based in Toronto, Ontario.",
+                     'Shipping and returns available across North America.\n\nOur headquarters are in Toronto, Ontario.',
+                     '<div>Free shipping across Canada</div><p>Our headquarters are in Toronto, Ontario.</p>']:
+            with self.subTest(text=text):
+                result=self.check(text)
+                self.assertEqual((result['status'], result['country']),('supported','Canada'),result)
+        for text in ['Our headquarters and factory are in Toronto and Shenzhen, China respectively.',
+                     'Our headquarters and factory are in Toronto and Shenzhen, China.']:
+            result=self.check(text); self.assertNotEqual(result['status'],'supported',result)
