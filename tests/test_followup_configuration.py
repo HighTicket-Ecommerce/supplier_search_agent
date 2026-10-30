@@ -28,3 +28,7 @@ class ConfigurationFollowupTests(unittest.TestCase):
             for path in ['/products/plunge','/collections/plunges']:
                 with self.subTest(quote=quote,path=path):
                     self.assertEqual(self.check(quote,quote,path),'not_established')
+
+    def test_product_word_in_non_inventory_heading_does_not_void_inclusion(self):
+        quote='This cold plunge includes a tub and chiller'
+        self.assertEqual(self.check('We design cold plunge products\n\n'+quote,quote),'supported')
