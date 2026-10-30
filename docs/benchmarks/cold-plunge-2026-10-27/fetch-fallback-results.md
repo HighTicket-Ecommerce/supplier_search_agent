@@ -28,6 +28,8 @@ All **nine retained model-result quotes** matched their captured sources under t
 
 ## Controlled fallback probes
 
+The committed `run_fallback_probe.py` reproduces this path with a sanitized HTTP-500 response-shape fixture. For example, `python docs/benchmarks/cold-plunge-2026-10-27/run_fallback_probe.py --case dev-redwood --round new-probe-name --live-browser` replays the raw leg and permits one fresh browser call. Use `--browser-fixture path/to/items.json` instead for a fully offline replay. Every round requires a new name and retains two page attempts, at most one paid actor call, 90 seconds, a $0.75 exposure ceiling and a $0.50 actor cap. It performs no model analysis, supplier qualification or export. The sanitized fixture is a reconstruction; original historical captures and hashes remain unchanged.
+
 To exercise the actual fallback path, each probe supplied the site's exact saved raw-timeout dataset response to the normal parser, then allowed **one fresh browser request**. The raw leg was replayed, not fetched or billed again. Both legs counted toward the two-attempt page budget. The probes performed no model analysis, supplier classification or export.
 
 | Homepage | Healthy raw sample | Fresh browser after replayed timeout | Browser main-text characters |

@@ -1,0 +1,4 @@
+{
+  "provenance": "Sanitized reconstruction of the recorded HTTP-500 raw timeout response shape; not the original provider bytes.",
+  "items": [{"crawl": {"httpStatusCode": 500, "requestStatus": "failed", "httpStatusMessage": "request timed out after 30 seconds."}, "metadata": {}, "text": ""}]
+}
