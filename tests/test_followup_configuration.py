@@ -21,3 +21,10 @@ class ConfigurationFollowupTests(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.assertEqual(self.check(heading+'\n\nTub and chiller', 'Tub and chiller'),'not_established')
         self.assertEqual(self.check('Included\n\nTub and chiller','Tub and chiller'),'supported')
+
+    def test_inventory_list_names_do_not_describe_one_configuration(self):
+        for prefix in ['Products include','Our product line includes','Our lineup includes','Our collection includes','Our offerings include','The shop features']:
+            quote=prefix+' tubs and chillers'
+            for path in ['/products/plunge','/collections/plunges']:
+                with self.subTest(quote=quote,path=path):
+                    self.assertEqual(self.check(quote,quote,path),'not_established')
