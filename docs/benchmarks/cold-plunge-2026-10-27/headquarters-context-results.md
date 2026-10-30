@@ -1,5 +1,7 @@
 # Headquarters and location context — 2026-10-27
 
+Follow-up: [complete-system component validation](component-evidence-results.md) now keeps LeisureCraft in review and preserves the supported Penguin, Sun Home and Coldture controls. The historical results below remain unchanged.
+
 **The HQ guard now keeps BlueCube in review instead of accepting a workshop address as headquarters.** Penguin and Sun Home retain their valid office/HQ evidence. LeisureCraft's newly fetched Contact page establishes a head office, but its automatic qualification still needs manual product review: a chiller compartment does not prove an included chiller.
 
 Application code: `136cd512ad46411767b4e6037208e79a613444a4`, branch `fix/headquarters-location-context`, based on `355d77e`. Application files stayed unchanged during live validation. This is a targeted development check, not a new full-cohort benchmark pass.
