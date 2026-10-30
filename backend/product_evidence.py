@@ -27,7 +27,8 @@ _CHILLER_PART = re.compile(
     r"\b(?:compartment|housing)\b.{0,45}\bchiller\b", re.I)
 _RELATED = re.compile(r"\b(?:related|recommended|accessories|standalone|components?|module)\b", re.I)
 _ACCESSORY_TITLE = re.compile(r"\b(?:filters?|covers?|hoses?|compartments?|accessor(?:y|ies)|components?|modules?)\b", re.I)
-_CATALOGUE_LIST = re.compile(r"\b(?:catalog(?:ue)?|product range|product list|our range)\b", re.I)
+_CATALOGUE_LIST = re.compile(r"\b(?:catalog(?:ue)?|product range|product list|our range|our products|products we (?:offer|sell))\b", re.I)
+_EXCLUDED_HEADING = re.compile(r"\b(?:not included|excluded|sold separately|optional|accessories|add[ -]ons?)\b", re.I)
 _CONFIGURATION = re.compile(r"\b(?:bundles?|package|pairing|paired|all[ -]in[ -]one|complete systems?)\b", re.I)
 
 
@@ -93,7 +94,7 @@ def verify_product_configuration(product, evidence, pages, matched_urls):
                                                "reason": "configuration_quote_crosses_source_blocks"})
             for clause, heading in passages:
                 reason, basis = "components_not_affirmatively_supplied", None
-                if _NEGATIVE.search(clause):
+                if _EXCLUDED_HEADING.search(heading) or _NEGATIVE.search(clause):
                     reason = "components_negated_or_sold_separately"
                 elif _CHILLER_PART.search(clause):
                     reason = "chiller_compartment_or_accessory_only"
