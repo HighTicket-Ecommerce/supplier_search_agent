@@ -91,7 +91,7 @@ class FoundationReviewTests(unittest.TestCase):
         second = {"lookup_hint": "Brand B", "title": "B"}
         with patch.object(research_runner, "run_serp_discovery", return_value=[]), \
              patch.object(research_runner, "run_google_shopping_discovery", side_effect=[[first], [second]]), \
-             patch.object(research_runner, "run_serp_brand_lookup", side_effect=lambda *a, **k: [{"url": "https://brand-b.example"}]), \
+             patch.object(research_runner, "run_serp_brand_lookup", side_effect=lambda *a, **k: [] if "brand-b.example" in k.get("seen_domains", set()) else [{"url": "https://brand-b.example"}]), \
              patch.object(research_runner, "process_supplier", side_effect=[
                  {"url": "https://brand-b.example", "status": "review", "reason": "shopping_identity_not_established"},
                  {"url": "https://brand-b.example", "status": "qualified"}]) as process:

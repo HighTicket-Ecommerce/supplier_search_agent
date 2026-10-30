@@ -46,6 +46,11 @@ def run_research_job(job_id, req):
     def enough():
         return len(accepted) >= req.target_suppliers or processed >= req.max_candidate_domains
 
+    def identity_seen(hint):
+        hint = (hint or "").strip().casefold()
+        retryable = {domain for domain in retryable_identities if (domain, hint) not in identity_attempts}
+        return (seen - retryable) | resolved
+
     def process(candidates):
         nonlocal processed
         for item in candidates:
@@ -85,6 +90,8 @@ def run_research_job(job_id, req):
                     retryable_identities.add(domain)
                 else:
                     retryable_identities.discard(domain)
+                    if final_domain:
+                        seen.add(final_domain)
                 if final_domain and supplier["status"] == "qualified":
                     resolved.add(final_domain)
                 if supplier["status"] == "qualified":
@@ -145,7 +152,7 @@ def run_research_job(job_id, req):
                     context.checkpoint()
                     candidates = run_serp_brand_lookup(row["supplier_name"], req.product, context,
                         country=(req.allowed_countries or ["United States"])[0], limit=min(3, req.max_candidate_domains-processed),
-                        known_domains=master.by_domain if master else (), seen_domains=seen | resolved)
+                        known_domains=master.by_domain if master else (), seen_domains=identity_seen(row["supplier_name"]))
                     for candidate in candidates:
                         candidate.update(brand_name=row["supplier_name"], discovery_source="distributor_identity_lookup",
                                          directory_observation_id=row["observation_id"], directory_source_url=row["source_url"])
@@ -171,7 +178,7 @@ def run_research_job(job_id, req):
                         break
                     candidates = run_serp_brand_lookup(item["lookup_hint"], req.product, context, country=country,
                         limit=min(3,req.max_candidate_domains-processed),
-                        known_domains=master.by_domain if master else (), seen_domains=seen | resolved)
+                        known_domains=master.by_domain if master else (), seen_domains=identity_seen(item["lookup_hint"]))
                     for candidate in candidates:
                         candidate.update(brand_name=item["lookup_hint"], discovery_source="shopping_identity_lookup", shopping_observation=item)
                     process(candidates)

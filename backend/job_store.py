@@ -56,6 +56,10 @@ def recover_interrupted_jobs():
             job = json.loads(data)
             if job["status"] in {"queued", "running"}:
                 job.update(status="interrupted", error="Backend restarted; saved partial results are available.")
+                for entry in job.get("discovery_candidates", []):
+                    if entry.get("verification_status") in {"pending", "checking"}:
+                        entry.update(verification_status="interrupted" if entry["verification_status"] == "checking" else "not_checked",
+                                     verification_stop_reason="backend_restarted")
                 db.execute("UPDATE jobs SET data = ?, updated = ? WHERE id = ?", (json.dumps(job), time.time(), job_id))
 
 
