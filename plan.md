@@ -257,3 +257,15 @@ Update the checkboxes and this log after each completed step. Add result/report 
 - [ ] Confirm fresh automated review results on updated remote heads before merging.
 
 No new paid supplier evaluation, source-list/export change, server, merge or deployment was part of this repair round. See the [repair report](docs/greptile-review-fixes-2026-10-30.md) and [stack order](docs/pull-request-stack-2026-10-30.md).
+
+## Follow-up audit repairs — 2026-10-30
+
+- [x] Back up all 18 heads and repair the stack from the lowest affected layer.
+- [x] Fix 35 follow-up items and add integration coverage for two already-working behaviors.
+- [x] Validate all 18 updated branch heads offline; final application: 274 tests (45 new methods).
+- [x] Apply product-role checks to plain primary cold-plunge requests as well as complete-system requests.
+- [ ] Resolve the contradictory single-category exclusion precedence requirement (P2-4); post-noun exclusions and broader-brief mentions are fixed.
+- [ ] Obtain approval before pushing the prepared commits; no remote mutation occurred in this round.
+- [ ] Obtain fresh review on the pushed heads before merging; a separately authorized bounded quality evaluation remains pending.
+
+See [the follow-up report](docs/greptile-followup-fixes-2026-10-30.md) for per-item evidence, exact validated commits, test counts, the exclusion-rule conflict, and prepared lease-protected push commands. The preceding initial-review entry describes the earlier 229-test state and is not a claim that this follow-up was already complete.
