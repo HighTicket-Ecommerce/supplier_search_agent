@@ -265,7 +265,7 @@ No new paid supplier evaluation, source-list/export change, server, merge or dep
 - [x] Validate all 18 updated branch heads offline; final application: 276 tests (47 new methods); layers 14–18 rerun after the exclusion decision.
 - [x] Apply product-role checks to plain primary cold-plunge requests as well as complete-system requests.
 - [x] Resolve P2-4 per the user’s choice: explicit exclusions win over contradictory requested products, including bundle boosts. Update the conflicting test and retain its positive control.
-- [ ] Obtain approval before pushing the prepared commits; no remote mutation occurred in this round.
+- [x] Obtain user authorization to push the tested stack to the 18 existing PRs; merging remains with the user.
 - [ ] Obtain fresh review on the pushed heads before merging; a separately authorized bounded quality evaluation remains pending.
 
 See [the follow-up report](docs/greptile-followup-fixes-2026-10-30.md) for per-item evidence, exact validated commits, test counts, the resolved exclusion rule, and prepared lease-protected push commands. The preceding initial-review entry describes the earlier 229-test state and is not a claim that this follow-up was already complete.

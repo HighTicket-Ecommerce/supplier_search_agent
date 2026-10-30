@@ -1,6 +1,6 @@
 # Supplier research follow-up repairs — 2026-10-30
 
-Local implementation and offline verification of the supplied follow-up audit. **36 items fixed and two coverage gaps addressed. P2-4 is resolved: explicit exclusions take precedence, as requested by the user.** Nothing was pushed, merged, deployed, posted to GitHub or checked against live supplier/provider services. No development server was started.
+Local implementation and offline verification of the supplied follow-up audit. **36 items fixed and two coverage gaps addressed. P2-4 is resolved: explicit exclusions take precedence, as requested by the user.** The user authorized pushing the tested stack to its existing PRs after choosing exclusion precedence. Publication leaves merging to the user; no deployment, live supplier/provider evaluation, GitHub comment or development server is part of this update.
 
 ## Results and limits
 
@@ -101,9 +101,9 @@ The table records the exact branch heads tested. Subsequent documentation-only u
 
 Run the suite in Python 3.12 with the branch’s installed requirements, fake provider keys, dotenv loading disabled, a temporary job/reference directory, and outbound socket connections blocked. The local diagnostic runner implements those controls around `unittest` discovery. Do not point the tests at production job/reference stores.
 
-## Prepared push commands — NOT executed
+## Original lease-protected publication commands
 
-These commands use the original remote heads as exact leases. If any remote head changes, stop and review it; do not replace a failed lease with an unconditional force push. Run in stack order only after approval. This report does not approve merging.
+The user authorized publication on 2026-10-30. These commands record the original remote heads as exact leases for the first update; they will refuse to overwrite different remote heads after publication. An atomic push can apply the equivalent leases to all 18 refs together. This publication does not approve or perform merging.
 
 ```sh
 git push --force-with-lease=refs/heads/feat/supplier-research-controls:37d6f94486751d61ea70c06417ec441b2b4ef964 origin feat/supplier-research-controls:refs/heads/feat/supplier-research-controls
@@ -126,4 +126,4 @@ git push --force-with-lease=refs/heads/feat/manufacturer-discovery-evaluation:ba
 git push --force-with-lease=refs/heads/fix/discovery-candidate-selection:321bece709837167cfb53dc0b7b05b053dc7286d origin fix/discovery-candidate-selection:refs/heads/fix/discovery-candidate-selection
 ```
 
-After a separately approved push, request fresh review on the new remote heads and inspect the updated diffs in order before merging. A later bounded supplier evaluation should measure candidate relevance, role/country false positives, novel suppliers found, unresolved-review rate and cost per useful verified supplier. It was not run in this repair.
+After publication, check fresh review results on the new remote heads and inspect the updated diffs in order before merging. A later bounded supplier evaluation should measure candidate relevance, role/country false positives, novel suppliers found, unresolved-review rate and cost per useful verified supplier. It was not run in this repair.
