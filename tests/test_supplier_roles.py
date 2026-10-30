@@ -157,12 +157,14 @@ class SupplierRoleTests(unittest.TestCase):
                       "We are an authorized distributor of Acme heaters to retailers",
                       "We supply third-party brands to trade customers"]:
             with self.subTest(quote=quote):
-                self.assertEqual(self.check_supplier([quote], role="Distributor")["status"], "qualified")
+                self.assertEqual(self.check_supplier([quote], role="Distributor", allowed=["Distributor"])["status"], "qualified")
         for quote in ["Wholesale", "Become a dealer", "We distribute our own products to retailers",
                       "We sell Acme heaters to consumers", "We manufacture heaters for our dealers",
                       "We sell third-party products", "We supply wholesale heaters"]:
             with self.subTest(quote=quote):
-                self.assert_role_review(self.check_supplier([quote], role="Distributor"), "Distributor")
+                self.assert_role_review(self.check_supplier([quote], role="Distributor", allowed=["Distributor"]), "Distributor")
+        row = self.check_supplier(["We distribute third-party heaters wholesale to dealers"], role="Distributor")
+        self.assertEqual((row["status"], row["reason"]), ("excluded", "supplier_role_outside_brief"))
 
     def test_explicit_retailer_is_excluded_only_when_role_supported(self):
         row = self.check_supplier(["We are a retailer of third-party sauna heaters"], role="Retailer")

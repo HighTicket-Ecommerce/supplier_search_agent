@@ -4,11 +4,14 @@ from backend.filters import is_blocked_domain
 from backend.utils import normalize_url, domain_from_url, is_search_destination
 
 MARKETS = {"United States": "us", "Canada": "ca", "United Kingdom": "gb", "Germany": "de", "Australia": "au"}
+ROLE_SEARCHES = {"Manufacturer": "manufacturer", "Brand owner": "brand official website",
+                 "Distributor": "wholesale distributor", "Retailer": "retailer official website"}
 
 
 def run_serp_discovery(product, context, *, country="United States", limit=20, query=None):
     pages = run_actor(APIFY_SERP_ACTOR_ID, {
-        "queries": query or f"{product} manufacturer\n{product} brand official website\n{product} wholesale supplier",
+        "queries": query or "\n".join(f"{product} {ROLE_SEARCHES[role]}"
+                                      for role in dict.fromkeys(context.request.allowed_supplier_types)),
         "countryCode": MARKETS[country], "languageCode": "en",
         "maxPagesPerQuery": 1, "maximumLeadsEnrichmentRecords": 0,
         "saveHtml": False, "saveHtmlToKeyValueStore": False,

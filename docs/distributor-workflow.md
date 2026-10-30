@@ -1,6 +1,6 @@
 # Optional distributor research workflow
 
-Use distributors as a small, review-led source of additional suppliers. Keep manufacturer/brand-owner research as the primary lane until product/brand relationships can be verified automatically. The [live collection results](benchmarks/distributors-2026-10-28/collection-fix-results.md) show what works and what remains uncertain.
+Use distributors as a small, review-led source of additional suppliers. New UI and API searches default to manufacturers and brand owners; distributor searches require an explicit role selection. Discovery queries follow those selected roles. Saved jobs and explicit role settings are preserved. The [live collection results](benchmarks/distributors-2026-10-28/collection-fix-results.md) show what works and what remains uncertain.
 
 ## Set up a small check
 
