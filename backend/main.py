@@ -1,3 +1,4 @@
+import hmac
 import uuid
 import csv
 from contextlib import asynccontextmanager
@@ -6,7 +7,9 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from starlette.datastructures import Headers
 
+from backend import config
 from backend.models import ResearchRequest
 from backend.job_store import (init_job, get_job, update_job, recover_interrupted_jobs,
                                claim_export, finish_export)
@@ -21,7 +24,32 @@ async def lifespan(app):
     yield
 
 
+PUBLIC_PATHS = {"/health"}
+
+
+class RequireApiKey:
+    """Rejects requests without the shared API key before routing or body parsing."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        # Use the raw ASGI path: request.url is rebuilt from client-controlled headers.
+        if scope["type"] != "http" or scope["path"] in PUBLIC_PATHS:
+            return await self.app(scope, receive, send)
+        expected = config.SUPPLIER_API_KEY
+        supplied = Headers(scope=scope).get("x-api-key", "")
+        if not expected:
+            response = JSONResponse({"detail": "SUPPLIER_API_KEY is not configured on the backend"}, 503)
+        elif not hmac.compare_digest(supplied.encode(), expected.encode()):
+            response = JSONResponse({"detail": "Missing or invalid API key"}, 401)
+        else:
+            return await self.app(scope, receive, send)
+        await response(scope, receive, send)
+
+
 app = FastAPI(title="Supplier Research Agent", lifespan=lifespan)
+app.add_middleware(RequireApiKey)
 
 
 @app.exception_handler(RequestValidationError)
@@ -34,9 +62,8 @@ async def invalid_request(request, exc):
 
 @app.get("/health")
 def health_check():
-    from backend.config import OPENAI_API_KEY, APIFY_TOKEN, OPENAI_MODEL
-    return {"openai_key_set": bool(OPENAI_API_KEY), "openai_model": OPENAI_MODEL,
-            "apify_token_set": bool(APIFY_TOKEN)}
+    return {"openai_key_set": bool(config.OPENAI_API_KEY), "openai_model": config.OPENAI_MODEL,
+            "apify_token_set": bool(config.APIFY_TOKEN)}
 
 
 @app.post("/research/start")

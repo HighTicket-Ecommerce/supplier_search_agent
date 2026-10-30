@@ -1,11 +1,13 @@
 import os
 import csv
+import hmac
 import time
 import requests
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from backend.master_index import parse_supplier_csv
+from backend.utils import spreadsheet_safe
 
 load_dotenv()
 
@@ -13,6 +15,8 @@ BACKEND_HOST = os.getenv("BACKEND_HOST", "127.0.0.1")
 BACKEND_PORT = os.getenv("BACKEND_PORT", "8000")
 BACKEND_SCHEME = os.getenv("BACKEND_SCHEME", "http")
 BASE_URL = f"{BACKEND_SCHEME}://{BACKEND_HOST}:{BACKEND_PORT}"
+SUPPLIER_API_KEY = os.getenv("SUPPLIER_API_KEY", "")
+UI_PASSWORD = os.getenv("SUPPLIER_UI_PASSWORD", "")
 
 COUNTRY_OPTIONS = [
     "United States",
@@ -164,16 +168,29 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 TERMINAL_STATES = {"completed", "stopped", "failed", "limited", "interrupted"}
+BACKEND_ERRORS = {
+    401: "The backend rejected the API key. Set the same SUPPLIER_API_KEY for the UI and the backend.",
+    503: "The backend is unavailable or has no SUPPLIER_API_KEY configured.",
+}
 
 
 def api(method, path, **kwargs):
     try:
-        response = requests.request(method, BASE_URL + path, timeout=20, **kwargs)
+        response = requests.request(method, BASE_URL + path, timeout=20,
+                                    headers={"X-API-Key": SUPPLIER_API_KEY}, **kwargs)
         response.raise_for_status()
         return response.json()
+    except requests.HTTPError as exc:
+        status = getattr(exc.response, "status_code", None)
+        st.error(BACKEND_ERRORS.get(status, "Backend request failed: HTTP " + str(status)))
+        st.stop()
     except requests.RequestException as exc:
         st.error("Backend request failed: " + type(exc).__name__)
         st.stop()
+
+
+def spreadsheet_csv(frame):
+    return frame.map(spreadsheet_safe).to_csv(index=False)
 
 
 def render_results(result):
@@ -193,7 +210,7 @@ def render_results(result):
                 flattened.append(display)
             frame = pd.DataFrame(flattened)
             st.dataframe(frame, width="stretch", hide_index=True)
-            st.download_button("Download " + key + " CSV", frame.to_csv(index=False), file_name=key+"_suppliers.csv", mime="text/csv", key="download_"+key)
+            st.download_button("Download " + key + " CSV", spreadsheet_csv(frame), file_name=key+"_suppliers.csv", mime="text/csv", key="download_"+key)
     with tabs[4]:
         catalogues = result.get("catalogues", {})
         if not catalogues:
@@ -205,7 +222,7 @@ def render_results(result):
             products = [{k: v for k, v in p.items() if k != "description"} for p in catalogue["products"]]
             frame = pd.DataFrame(products)
             st.dataframe(frame, width="stretch", hide_index=True)
-            st.download_button("Download product sample CSV", frame.to_csv(index=False), file_name="catalogue_products.csv",
+            st.download_button("Download product sample CSV", spreadsheet_csv(frame), file_name="catalogue_products.csv",
                                mime="text/csv", key="catalogue_"+url)
     if result.get("master_reference"):
         st.caption("Compared with: " + result["master_reference"]["filename"] + ". Unmatched rows are not confirmed new suppliers.")
@@ -229,6 +246,14 @@ def render_results(result):
 
 st.title("Supplier Research Agent")
 st.caption("Find candidates, verify the requested product, review the evidence, then export.")
+if UI_PASSWORD and not st.session_state.get("unlocked"):
+    password = st.text_input("Password", type="password")
+    if password and hmac.compare_digest(password.encode(), UI_PASSWORD.encode()):
+        st.session_state.unlocked = True
+        st.rerun()
+    elif password:
+        st.error("Incorrect password.")
+    st.stop()
 st.session_state.setdefault("job_id", None)
 st.session_state.setdefault("is_running", False)
 is_running = st.session_state.is_running

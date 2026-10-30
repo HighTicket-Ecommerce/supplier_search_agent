@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 os.environ["OPENAI_API_KEY"] = "offline-test-key"
 os.environ["APIFY_TOKEN"] = "offline-test-token"
 os.environ["OPENAI_MODEL"] = "gpt-5.2-2025-12-11"
+os.environ["SUPPLIER_API_KEY"] = "offline-test-api-key"
+os.environ["SUPPLIER_UI_PASSWORD"] = ""
 
 from fastapi.testclient import TestClient
 from backend import catalogue_runner, directory_runner, job_store, main, master_index, research_runner, supplier_validator, web_fetcher, public_fetch
@@ -29,7 +31,7 @@ class CatalogueAndMatchingTests(unittest.TestCase):
         self.env.start()
         self.network = patch.object(socket.socket, "connect", side_effect=AssertionError("Unexpected network access"))
         self.network.start()
-        self.client = TestClient(main.app)
+        self.client = TestClient(main.app, headers={"X-API-Key": "offline-test-api-key"})
         web_fetcher._CACHE.clear()
         self.reference = master_index.import_reference((FIXTURES / "master_sample.csv").read_text(), "master_sample.csv")
         self.index = master_index.MasterIndex(master_index.load_reference(self.reference["id"]))
