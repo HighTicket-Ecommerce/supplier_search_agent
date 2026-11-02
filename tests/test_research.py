@@ -458,10 +458,10 @@ class ResearchTests(unittest.TestCase):
             return response
         with patch("requests.request",side_effect=request):
             ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
-            next(x for x in ui.text_input if x.label=="Product").set_value("Sauna heaters")
+            next(x for x in ui.text_input if x.label=="Product types").set_value("Sauna heaters")
             ui.text_area[0].set_value("https://fixture.example")
             next(x for x in ui.checkbox if x.label=="Discover additional suppliers").uncheck()
-            next(x for x in ui.button if x.label=="Run research").click().run(timeout=10)
+            next(x for x in ui.button if x.label=="Search").click().run(timeout=10)
         self.assertFalse(ui.exception)
         self.assertTrue(payloads[0]["preview_only"])
         self.assertFalse(payloads[0]["use_apify"])
@@ -477,7 +477,7 @@ class ResearchTests(unittest.TestCase):
             ui.text_input[0].set_value("wrong").run(timeout=10)
             self.assertIn("Incorrect password.",[e.value for e in ui.error])
             ui.text_input[0].set_value("correct horse battery").run(timeout=10)
-            self.assertIn("Workflow",[w.label for w in ui.selectbox])
+            self.assertIn("Tool",[w.label for w in ui.selectbox])
             request.assert_not_called()
         self.assertFalse(ui.exception)
 

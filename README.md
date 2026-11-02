@@ -17,16 +17,24 @@ Set `SUPPLIER_API_KEY` to a long random value. The backend refuses every request
 
 Use **one backend worker**. SQLite jobs live in ignored `var/research_jobs.sqlite`; override with `SUPPLIER_JOB_DB`. Restarting the backend marks unfinished jobs interrupted and preserves their partial results. It does not automatically resume or repeat billable work. Use the saved job ID to load results in the UI.
 
+## Search screen
+
+The default screen asks for **Product types**, **Supplier country**, **Supplier type** and **Exclude products**, then **Search**. Use **More options** for the supplier target, search budget, optional website seeds and explicit Google Sheets export consent. The default target is five suppliers with a $5 search budget; a run can stop before the target when a limit is reached.
+
+Saved research, master-list import/selection, list comparison and distributor-brand extraction are in the collapsed sidebar under **Tool**. Product exclusions remain visible on the main form and take precedence over contradictory product requests.
+
+Technical page, call, runtime and provider controls are no longer frontend inputs. UI requests inherit the bounded API defaults: 30 pages, 3 pages per supplier, 50 external calls and 300 seconds. Distributor-only searches automatically allow 4 pages per supplier for product, wholesale and company evidence. Shopping, Shopify catalogue analysis and browser fallback remain off by default; their explicit API options and evaluation helpers remain available for specialized work.
+
 ## Research workflow
 
-New searches default to **Manufacturer** and **Brand owner** in both the UI and API. Discovery queries follow the selected company roles. Select **Distributor** explicitly for the [optional review workflow](docs/distributor-workflow.md); brand/product authorization and commercial terms still need separate evidence. Saved jobs and requests with explicit roles retain their settings.
+New searches default to **Manufacturer** and **Brand owner** in both the UI and API. Discovery queries follow the selected company roles. Select **Distributor** under **Supplier type** for the [optional review workflow](docs/distributor-workflow.md); brand/product authorization and commercial terms still need separate evidence. Saved jobs and requests with explicit roles retain their settings.
 
 1. Enter the requested product, exclusions and allowed supplier headquarters.
 2. Optionally supply website URLs. Seeds are processed before discovery; disable additional discovery for a seed-only run.
-3. Google Search discovers candidates in each selected country, one results page per query. Shopping is optional and off by default. Shopping titles, merchants and product URLs are hints, not verified brands or official supplier sites. When enabled, additional searches propose company sites and qualification requires identity evidence.
+3. Google Search discovers candidates in each selected country, one results page per query. Shopping is available through the API and off by default. Shopping titles, merchants and product URLs are hints, not verified brands or official supplier sites. When enabled, additional searches propose company sites and qualification requires identity evidence.
 4. Fetch the supplied page and relevant same-site product/About/Contact links. HTML anchors are captured separately from readable text, including navigation and footer links. Follow-up selection prefers company pages while location evidence is missing, then product evidence; relevant links found on those pages can also be followed within the same hard limits. Static RAG fetching is the default. An optional bounded browser retry handles empty, thin or JavaScript-shell evidence; both attempts count toward the page limits, and navigation-only HTML is treated as thin evidence.
 5. The model receives the product, exclusions, allowed roles, headquarters countries and attributed excerpts. Strict output validation and literal source-quote checks separate qualified candidates, review-needed cases and exclusions. Missing product/country evidence and extraction failures do not silently count as accepted suppliers.
-6. Every research job collects results without writing to Sheets. Preview-only is the default and prevents Sheets export. To export, disable preview before starting the job, review the qualified candidates and explicitly select rows to export. Repeated exports skip previously claimed records. Uncertain Google writes require manual reconciliation before retrying.
+6. Every research job collects results without writing to Sheets. Preview-only is the default and prevents Sheets export. To export from the UI, enable **Allow Google Sheets export after review** under **More options** before starting the job, then review the qualified candidates and explicitly select rows to export. Repeated exports skip previously claimed records. Uncertain Google writes require manual reconciliation before retrying.
 
 Qualified means the supplied evidence passed the research checks. It does not establish dealer-account availability, complete catalogue coverage or verified commercial terms. Model confidence alone never accepts a supplier. Dealer evidence is optional. Prices and margins are not guessed by the model; unverified Shopping price hints remain separate.
 
@@ -44,7 +52,7 @@ Excerpts reserve space for location, product configuration, company role and con
 
 ## Compare with your master list
 
-In **Master supplier list**, import a UTF-8 CSV or load a previously imported reference, then select it under **Compare against**. Importing stores an immutable, minimal local reference in ignored `var/references/`; it never edits the source CSV. Name, website, product types, country and source row are retained. Private contact columns are not copied. Override the directory with `SUPPLIER_REFERENCE_DIR`.
+In the sidebar’s **Master supplier list**, import a UTF-8 CSV or load a previously imported reference, then select it under **Compare against**. Importing stores an immutable, minimal local reference in ignored `var/references/`; it never edits the source CSV. Name, website, product types, country and source row are retained. Private contact columns are not copied. Override the directory with `SUPPLIER_REFERENCE_DIR`.
 
 The matcher compares the submitted website and the final redirected website. Exact host matches stay `existing_domain_match`. A legal-suffix difference on that same host (for example "Homecraft" and "Homecraft Inc.") is still an existing match and records `name_relation`. A different host under the same registrable domain is `related_domain_needs_verification`. The same normalized name on a different website is `name_match_different_website`; a name-only match with no conflicting website stays `name_match_needs_verification`. Similar names, parent/brand relationships and private-platform hosts such as `myshopify.com` are never merged. A content hash plus source row identifies a reference record, not a permanent business identity. Unmatched does **not** mean confirmed new. Master country data never substitutes for current headquarters evidence.
 
@@ -54,7 +62,7 @@ Choose **Compare supplier lists** for a deterministic comparison of up to 2,000 
 
 ## Distributor research
 
-To check a distributor company, choose **Research suppliers** and select only **Distributor** under Company roles. Start with the [bounded optional workflow](docs/distributor-workflow.md); current distributor qualification limitations are documented there.
+To check a distributor company, choose **Find suppliers** in the sidebar and select only **Distributor** under **Supplier type**. Start with the [bounded optional workflow](docs/distributor-workflow.md); current distributor qualification limitations are documented there.
 
 Choose **Extract distributor brands**, enter directory URLs and optionally select a master reference. Extraction preserves each label and its source before any official-site qualification. It deduplicates repeated links within a directory while retaining aliases as separate observations.
 
@@ -64,7 +72,7 @@ The current adapters handle static `/brandsupplier/`, `/brand/`, `/brands/` and 
 
 ## Shopify products and observed prices
 
-Enable **Check Shopify product catalogue** to use the benchmarked [Trove Vault actor](https://apify.com/trovevault/shopify-products-scraper/input-schema). The app runs it only when Shopify markers appear in fetched evidence or the website is explicitly listed under **Known Shopify websites**. Each store receives a positive product cap (20 by default, at most 50), disabled inventory enrichment, a run timeout and a provider charge cap. The actor's internal catalogue pagination is bounded by product count/time/charge, not the app's website-page counter; one catalogue fetch counts as one evidence operation.
+Set `use_shopify_catalogue: true` in an API request to use the benchmarked [Trove Vault actor](https://apify.com/trovevault/shopify-products-scraper/input-schema). The app runs it only when Shopify markers appear in fetched evidence or the website is explicitly listed in `shopify_catalogue_urls`. Each store receives a positive product cap (20 by default, at most 50), disabled inventory enrichment, a run timeout and a provider charge cap. The actor's internal catalogue pagination is bounded by product count/time/charge, not the app's website-page counter; one catalogue fetch counts as one evidence operation.
 
 Product batches receive the actual request and exclusions. Strict product/variant IDs and literal quotes are checked before a classification can contribute evidence or prices. A complete cold-plunge system requires a tub with an included or integrated chiller. Accessories, separate chillers, installation services, unrelated categories and bundles with unclear contents stay separate. Classification applies to the requested item, so an explicitly requested accessory can itself be primary.
 

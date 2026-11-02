@@ -36,7 +36,7 @@ class FrontendStartupTests(unittest.TestCase):
                 app = AppTest.from_file(str(app_path)).run(timeout=15)
                 assert not app.exception, [error.message for error in app.exception]
                 assert app.title[0].value == 'Supplier Research Agent'
-                assert any(field.label == 'Workflow' for field in app.selectbox)
+                assert any(field.label == 'Tool' for field in app.selectbox)
         ''')
         with tempfile.TemporaryDirectory() as tmp:
             result = subprocess.run([sys.executable, '-I', '-c', code, str(app_path)],

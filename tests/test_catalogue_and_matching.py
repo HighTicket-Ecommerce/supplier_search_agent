@@ -363,16 +363,16 @@ class CatalogueAndMatchingTests(unittest.TestCase):
                 response=MagicMock();response.json.return_value=payload;return response
             with patch("requests.request",side_effect=request):
                 app=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run()
-                next(w for w in app.selectbox if w.label=="Workflow").set_value(mode).run()
+                next(w for w in app.selectbox if w.label=="Tool").set_value(mode).run()
                 if mode == "list_compare":
                     app.session_state.master_references=[self.reference]
                     app.run()
                     next(w for w in app.selectbox if w.label=="Compare against").set_value(self.reference["id"]).run()
                     next(w for w in app.text_area if w.label=="Or supplier names, one per line").set_value("Homecraft\nHarman").run()
                 else:
-                    next(w for w in app.text_input if w.label=="Product").set_value("Gas logs").run()
+                    next(w for w in app.text_input if w.label=="Product types").set_value("Gas logs").run()
                     next(w for w in app.text_area if w.label=="Distributor brand directories").set_value("https://directory.example/brands").run()
-                next(w for w in app.button if w.label=="Run research").click().run()
+                next(w for w in app.button if w.label==("Compare lists" if mode == "list_compare" else "Extract brands")).click().run()
             self.assertEqual(len(app.exception),0)
             self.assertEqual(calls[0]["research_mode"],mode)
             self.assertTrue(calls[0]["preview_only"])

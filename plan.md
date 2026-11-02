@@ -269,3 +269,12 @@ No new paid supplier evaluation, source-list/export change, server, merge or dep
 - [ ] Obtain fresh review on the pushed heads before merging; a separately authorized bounded quality evaluation remains pending.
 
 See [the follow-up report](docs/greptile-followup-fixes-2026-10-30.md) for per-item evidence, exact validated commits, test counts, the resolved exclusion rule, and prepared lease-protected push commands. The preceding initial-review entry describes the earlier 229-test state and is not a claim that this follow-up was already complete.
+
+## Simpler supplier search — 2026-11-03
+
+- [x] Reduce the default screen to Product types, Supplier country, Supplier type, Exclude products and Search.
+- [x] Keep business options (target, budget, supplied sites and explicit export consent) in a collapsed More options section.
+- [x] Move saved research, master lists, list comparison and directory extraction into the sidebar.
+- [x] Use bounded API defaults instead of frontend page/call/runtime/provider controls; retain four-page evidence collection automatically for distributor-only searches.
+- [x] Preserve existing search, comparison, extraction, password, startup and export behavior; 281 offline tests pass with four new UI regressions.
+- [ ] Review and merge the simplification PR, then update the deployed frontend. No live supplier research or deployment was run for this UI change.
