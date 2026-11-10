@@ -348,40 +348,27 @@ class CatalogueAndMatchingTests(unittest.TestCase):
             with self.assertRaises(ValueError):public_fetch.fetch_public("https://example.com",context,max_bytes=5)
         self.assertEqual(context.pages,1);self.assertEqual(context.calls,1);self.assertEqual(context.exposure,0)
 
-    def test_streamlit_list_compare_and_directory_payloads(self):
+    def test_streamlit_can_load_older_observations_and_catalogues(self):
         from streamlit.testing.v1 import AppTest
-        for mode in ["list_compare", "distributor_brands"]:
-            calls=[]
-            def request(method, url, **kwargs):
-                if method == "POST":
-                    calls.append(kwargs["json"])
-                    payload={"job_id":"ui-fixture","status":"queued"}
-                elif "/status/" in url:
-                    payload={"status":"completed","accepted_count":0,"review_count":0,"processed":0,"limits":{}}
-                else:
-                    payload={"job_id":"ui-fixture","status":"completed","accepted":[],"review":[],"rejected":[],"preview_only":True,"limits":{}}
-                response=MagicMock();response.json.return_value=payload;return response
-            with patch("requests.request",side_effect=request):
+        cases = [
+            ({"observations": [{"supplier_name": "Homecraft", "status": "observation"}]}, "Saved observations"),
+            ({"catalogues": {"https://fixture.example": {"coverage": {}, "products": [{"title": "Sauna heater"}]}}}, "Catalogue products"),
+        ]
+        for extra, expected_tab in cases:
+            payload={"job_id":"ui-fixture","status":"completed","accepted":[],"review":[],"rejected":[],"preview_only":True,**extra}
+            response=MagicMock();response.json.return_value=payload
+            with self.subTest(tab=expected_tab), patch("requests.request",return_value=response) as request:
                 app=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run()
-                next(w for w in app.selectbox if w.label=="Workflow").set_value(mode).run()
-                if mode == "list_compare":
-                    app.session_state.master_references=[self.reference]
-                    app.run()
-                    next(w for w in app.selectbox if w.label=="Compare against").set_value(self.reference["id"]).run()
-                    next(w for w in app.text_area if w.label=="Or supplier names, one per line").set_value("Homecraft\nHarman").run()
-                else:
-                    next(w for w in app.text_input if w.label=="Product").set_value("Gas logs").run()
-                    next(w for w in app.text_area if w.label=="Distributor brand directories").set_value("https://directory.example/brands").run()
-                next(w for w in app.button if w.label=="Run research").click().run()
-            self.assertEqual(len(app.exception),0)
-            self.assertEqual(calls[0]["research_mode"],mode)
-            self.assertTrue(calls[0]["preview_only"])
-            if mode == "list_compare":
-                self.assertEqual(len(calls[0]["comparison_rows"]),2)
-                self.assertEqual(calls[0]["master_reference_id"],self.reference["id"])
-            else:
-                self.assertFalse(calls[0]["verify_directory_brands"])
-                self.assertEqual(calls[0]["directory_urls"],["https://directory.example/brands"])
+                self.assertTrue(next(w for w in app.button if w.label=="Load saved results").disabled)
+                next(w for w in app.text_input if w.label=="Saved job ID").set_value("ui-fixture").run()
+                self.assertFalse(next(w for w in app.button if w.label=="Load saved results").disabled)
+                request.assert_not_called()
+                next(w for w in app.button if w.label=="Load saved results").click().run()
+                self.assertFalse(app.exception)
+                self.assertEqual([tab.label for tab in app.tabs], ["Qualified candidates", "Needs review", "Excluded", expected_tab])
+                request.assert_called_once()
+                self.assertEqual(request.call_args.args[0], "GET")
+                self.assertTrue(request.call_args.args[1].endswith("/research/result/ui-fixture"))
 
 
 if __name__ == "__main__":

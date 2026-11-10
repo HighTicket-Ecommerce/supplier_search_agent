@@ -1,3 +1,5 @@
+import copy
+import json
 import os
 from pathlib import Path
 import socket
@@ -10,7 +12,7 @@ os.environ["APIFY_TOKEN"] = "offline-test-token"
 os.environ["SUPPLIER_API_KEY"] = "offline-test-api-key"
 
 from fastapi.testclient import TestClient
-from backend import apify_runner, job_store, main, master_index, research_runner
+from backend import apify_runner, job_store, main, master_index, research_runner, supplier_validator
 from backend.discovery_selection import (MAX_ORGANIC_ROWS_PER_PAGE, MAX_SERP_PAGES,
                                          select_serp_candidates)
 from backend.models import ResearchRequest
@@ -54,6 +56,27 @@ class DiscoverySelectionTests(unittest.TestCase):
     @staticmethod
     def decision(product, url, context, **kwargs):
         return {"url": url, "supplier_name": "Candidate", "status": "review", "reason": "fixture_review"}
+
+    def test_no_supplied_websites_discovers_then_checks_supplier_evidence(self):
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "supplier_cases.json").read_text())["cases"][0]
+        request = ResearchRequest(product=fixture["product"], allowed_countries=["Canada"], target_suppliers=1)
+        self.assertEqual(request.candidate_urls, [])
+        job_store.init_job("discovery-only", request.model_dump())
+        pages = [page("Sauna heaters manufacturer", row("homecraftsaunas.com"))]
+        with patch.object(apify_runner, "run_actor", return_value=pages) as actor, \
+             patch.object(supplier_validator, "fetch_website_pages", return_value=copy.deepcopy(fixture["pages"])) as fetch, \
+             patch.object(supplier_validator, "analyze_supplier_with_llm", return_value=copy.deepcopy(fixture["analysis"])):
+            research_runner.run_research_job("discovery-only", request)
+        self.assertEqual(actor.call_count, 1)
+        self.assertEqual(actor.call_args.args[1]["queries"].splitlines(),
+                         ["Sauna heaters manufacturer", "Sauna heaters brand official website"])
+        self.assertEqual(actor.call_args.args[1]["countryCode"], "ca")
+        self.assertEqual(fetch.call_args.args[0], "https://homecraftsaunas.com")
+        job = job_store.get_job("discovery-only")
+        self.assertEqual(job["status"], "completed")
+        self.assertEqual([row["supplier_name"] for row in job["accepted"]], ["Homecraft"])
+        self.assertTrue(job["accepted"][0]["evidence"])
+        self.assertEqual(job["discovery_candidates"][0]["verification_status"], "qualified")
 
     def test_queries_take_turns_before_one_query_fills_the_limit(self):
         chosen, records, coverage = select([
