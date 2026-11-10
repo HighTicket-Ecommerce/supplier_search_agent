@@ -359,7 +359,10 @@ class CatalogueAndMatchingTests(unittest.TestCase):
             response=MagicMock();response.json.return_value=payload
             with self.subTest(tab=expected_tab), patch("requests.request",return_value=response) as request:
                 app=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run()
-                next(w for w in app.text_input if w.label=="Saved job ID").set_value("ui-fixture")
+                self.assertTrue(next(w for w in app.button if w.label=="Load saved results").disabled)
+                next(w for w in app.text_input if w.label=="Saved job ID").set_value("ui-fixture").run()
+                self.assertFalse(next(w for w in app.button if w.label=="Load saved results").disabled)
+                request.assert_not_called()
                 next(w for w in app.button if w.label=="Load saved results").click().run()
                 self.assertFalse(app.exception)
                 self.assertEqual([tab.label for tab in app.tabs], ["Qualified candidates", "Needs review", "Excluded", expected_tab])

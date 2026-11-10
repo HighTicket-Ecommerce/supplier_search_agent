@@ -489,7 +489,8 @@ class ResearchTests(unittest.TestCase):
             return response
         with patch("requests.request",side_effect=request):
             ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
-            next(w for w in ui.text_input if w.label=="Saved job ID").set_value("saved-ui-job")
+            next(w for w in ui.text_input if w.label=="Saved job ID").set_value("saved-ui-job").run(timeout=10)
+            self.assertFalse(next(b for b in ui.button if b.label=="Load saved results").disabled)
             next(b for b in ui.button if b.label=="Load saved results").click().run(timeout=10)
         self.assertFalse(ui.exception)
         self.assertTrue(any("rejected the API key" in e.value for e in ui.error))

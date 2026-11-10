@@ -36,16 +36,17 @@ class SimpleSearchUITests(unittest.TestCase):
         self.assertEqual([w.label for w in app.checkbox], ['Allow Google Sheets export after review'])
         request.assert_not_called()
 
-    def start_search(self, *, customize=False, supplier_type="Manufacturer"):
+    def start_search(self, *, customize=False, supplier_type="Manufacturer", allow_export=False):
         payloads = []
+        qualified = [{'url': 'https://fixture.example', 'supplier_name': 'Fixture supplier', 'status': 'qualified'}] if allow_export else []
         def request(method, url, **kwargs):
             response = MagicMock()
             if method == 'POST':
                 payloads.append(kwargs['json']); response.json.return_value = {'job_id': 'simple-ui'}
             elif '/status/' in url:
-                response.json.return_value = {'status': 'completed', 'accepted_count': 0, 'review_count': 0, 'processed': 0}
+                response.json.return_value = {'status': 'completed', 'accepted_count': len(qualified), 'review_count': 0, 'processed': len(qualified)}
             else:
-                response.json.return_value = {'job_id': 'simple-ui', 'status': 'completed', 'accepted': [], 'review': [], 'rejected': [], 'preview_only': True}
+                response.json.return_value = {'job_id': 'simple-ui', 'status': 'completed', 'accepted': qualified, 'review': [], 'rejected': [], 'preview_only': payloads[0]['preview_only']}
             return response
         with patch('requests.request', side_effect=request):
             app = AppTest.from_file(str(APP)).run()
@@ -56,7 +57,15 @@ class SimpleSearchUITests(unittest.TestCase):
             if customize:
                 next(w for w in app.number_input if w.label == 'Suppliers to find').set_value(7)
                 next(w for w in app.number_input if w.label == 'Search budget ($)').set_value(2.0)
+            if allow_export:
+                next(w for w in app.checkbox if w.label == 'Allow Google Sheets export after review').check()
             next(w for w in app.button if w.label == 'Search').click().run()
+            if allow_export:
+                candidates = next(w for w in app.multiselect if w.label == 'Select reviewed candidates to export')
+                self.assertEqual(candidates.value, [])
+                self.assertTrue(next(w for w in app.button if w.label == 'Export selected to Google Sheets').disabled)
+                candidates.set_value(['https://fixture.example']).run()
+                self.assertFalse(next(w for w in app.button if w.label == 'Export selected to Google Sheets').disabled)
         self.assertFalse(app.exception)
         self.assertEqual(len(payloads), 1)
         return payloads[0]
@@ -81,6 +90,10 @@ class SimpleSearchUITests(unittest.TestCase):
         request = ResearchRequest.model_validate(self.start_search(customize=True))
         self.assertEqual((request.target_suppliers, request.max_execution_cost_usd), (7, 2.0))
         self.assertTrue(request.preview_only)
+
+    def test_export_opt_in_enables_explicit_selection_without_exporting_automatically(self):
+        request = ResearchRequest.model_validate(self.start_search(allow_export=True))
+        self.assertFalse(request.preview_only)
 
     def test_distributor_search_keeps_its_evidence_allowance_without_a_page_control(self):
         request = ResearchRequest.model_validate(self.start_search(supplier_type='Distributor'))
