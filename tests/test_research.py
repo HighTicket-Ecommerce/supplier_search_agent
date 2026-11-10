@@ -442,7 +442,7 @@ class ResearchTests(unittest.TestCase):
             sheet.assert_called_once()
         self.assertEqual(job_store.get_job("test")["exports"][row["url"]],"exported")
 
-    def test_streamlit_seed_preview_flow(self):
+    def test_streamlit_discovery_preview_flow(self):
         from streamlit.testing.v1 import AppTest
         payloads=[]
         headers=[]
@@ -459,13 +459,13 @@ class ResearchTests(unittest.TestCase):
         with patch("requests.request",side_effect=request):
             ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
             next(x for x in ui.text_input if x.label=="Product types").set_value("Sauna heaters")
-            ui.text_area[0].set_value("https://fixture.example")
-            next(x for x in ui.checkbox if x.label=="Discover additional suppliers").uncheck()
             next(x for x in ui.button if x.label=="Search").click().run(timeout=10)
         self.assertFalse(ui.exception)
         self.assertTrue(payloads[0]["preview_only"])
-        self.assertFalse(payloads[0]["use_apify"])
-        self.assertEqual(payloads[0]["candidate_urls"],["https://fixture.example"])
+        self.assertTrue(payloads[0]["use_apify"])
+        self.assertEqual(payloads[0]["candidate_urls"],[])
+        self.assertEqual(payloads[0]["research_mode"],"supplier_search")
+        self.assertEqual([tab.label for tab in ui.tabs],["Qualified candidates","Needs review","Excluded"])
         self.assertTrue(headers)
         self.assertTrue(all(h=={"X-API-Key":"offline-test-api-key"} for h in headers))
 
@@ -474,10 +474,11 @@ class ResearchTests(unittest.TestCase):
         with patch.dict(os.environ,{"SUPPLIER_UI_PASSWORD":"correct horse battery"}), patch("requests.request") as request:
             ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
             self.assertEqual([w.label for w in ui.selectbox],[])
+            self.assertNotIn("Product types",[w.label for w in ui.text_input])
             ui.text_input[0].set_value("wrong").run(timeout=10)
             self.assertIn("Incorrect password.",[e.value for e in ui.error])
             ui.text_input[0].set_value("correct horse battery").run(timeout=10)
-            self.assertIn("Tool",[w.label for w in ui.selectbox])
+            self.assertIn("Product types",[w.label for w in ui.text_input])
             request.assert_not_called()
         self.assertFalse(ui.exception)
 
@@ -488,7 +489,8 @@ class ResearchTests(unittest.TestCase):
             return response
         with patch("requests.request",side_effect=request):
             ui=AppTest.from_file(str(Path(__file__).parents[1]/"ui"/"streamlit_app.py")).run(timeout=10)
-            next(b for b in ui.button if b.label=="Load saved master lists").click().run(timeout=10)
+            next(w for w in ui.text_input if w.label=="Saved job ID").set_value("saved-ui-job")
+            next(b for b in ui.button if b.label=="Load saved results").click().run(timeout=10)
         self.assertFalse(ui.exception)
         self.assertTrue(any("rejected the API key" in e.value for e in ui.error))
 

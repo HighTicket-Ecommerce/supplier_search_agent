@@ -2,15 +2,15 @@
 
 Use distributors as a small, review-led source of additional suppliers. New UI and API searches default to manufacturers and brand owners; distributor searches require an explicit role selection. Discovery queries follow those selected roles. Saved jobs and explicit role settings are preserved. The [live collection results](benchmarks/distributors-2026-10-28/collection-fix-results.md) show what works and what remains uncertain.
 
-## Set up a small check
+## Start a distributor search
 
-1. Choose **Find suppliers** under **Tool** in the sidebar and select only **Distributor** under **Supplier type**. This enables bounded collection of public wholesale/account-entry policy text; it does not log in or submit forms.
+1. Select only **Distributor** under **Supplier type**. This enables distributor discovery and bounded collection of public wholesale/account-entry policy text; it does not log in or submit forms.
 2. Enter a short product phrase in **Product types**, such as `Fire Magic outdoor gas grills`. Put `accessories, replacement parts, charcoal grills, electric grills` in **Exclude products** on the main form.
-3. Under **More options**, supply one or two relevant official company/catalogue URLs. Start with candidates from a brand's distributor page or a distributor's own catalogue. Keep **Discover additional suppliers** off for this validation pass. Select a saved master reference in the sidebar if you want identity comparison; an unchecked or unmatched lead is not confirmed new.
+3. Choose **Supplier country** and click **Search**. The UI discovers candidate websites; it has no seed-URL inputs, retailer option or separate comparison/directory tools. For a controlled API validation pass, provide one or two relevant official company/catalogue URLs in `candidate_urls` and set `use_apify: false`. A saved `master_reference_id` is optional for API checks; an unchecked or unmatched lead is not confirmed new.
 4. The UI automatically allows **four pages per supplier** for a distributor-only search. The overall page, call and runtime bounds come from API defaults; adjust **Search budget ($)** when needed. The default UI budget is $5. The historical two-site benchmark used seven total pages, twelve calls, 600 seconds and a $4 exposure ceiling; reproduce those exact settings through the API or retained benchmark helper.
 5. Leave **Allow Google Sheets export after review** off for a preview. Shopping and Shopify catalogue analysis stay off by default. Browser fallback can be requested through the API for a specialized check. The recorded actor cap is $0.50 per run; actual spend and conservative exposure are different figures.
 
-The **Extract distributor brands** sidebar tool has a different purpose: it collects brand labels and optionally looks up official brand sites. A directory observation does not verify that the distributor is authorized to supply that brand or a particular model.
+The API's `distributor_brands` mode has a different purpose: it collects brand labels from `directory_urls` and optionally looks up official brand sites with `verify_directory_brands: true`. It is not a separate UI workflow. A directory observation does not verify that the distributor is authorized to supply that brand or a particular model.
 
 ## Review the evidence
 

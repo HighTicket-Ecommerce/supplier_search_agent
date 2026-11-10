@@ -1,7 +1,6 @@
 import os
 import sys
 from pathlib import Path
-import csv
 import hmac
 import time
 import requests
@@ -13,7 +12,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.master_index import parse_supplier_csv
 from backend.utils import spreadsheet_safe
 
 load_dotenv()
@@ -201,8 +199,15 @@ def spreadsheet_csv(frame):
 
 
 def render_results(result):
-    tabs = st.tabs(["Qualified candidates", "Needs review", "Excluded", "List / directory observations", "Catalogue products"])
-    for tab, key in zip(tabs, ["accepted", "review", "rejected", "observations"]):
+    groups = [("Qualified candidates", "accepted"), ("Needs review", "review"), ("Excluded", "rejected")]
+    # Older saved jobs can contain other research results; show them only when present.
+    if result.get("observations"):
+        groups.append(("Saved observations", "observations"))
+    labels = [label for label, _ in groups]
+    if result.get("catalogues"):
+        labels.append("Catalogue products")
+    tabs = st.tabs(labels)
+    for tab, (_, key) in zip(tabs, groups):
         with tab:
             rows = result.get(key, [])
             if not rows:
@@ -211,26 +216,25 @@ def render_results(result):
             flattened = []
             for row in rows:
                 display = {k: v for k, v in row.items() if k not in {"sources", "discovery", "evidence", "catalogue", "master_match"}}
-                display["master_match_status"] = row.get("master_match", {}).get("status", "not_checked")
-                display["matched_master_rows"] = ", ".join(str(m["source_row"]) for m in row.get("master_match", {}).get("matches", []))
+                if result.get("master_reference"):
+                    display["master_match_status"] = row.get("master_match", {}).get("status", "not_checked")
+                    display["matched_master_rows"] = ", ".join(str(m["source_row"]) for m in row.get("master_match", {}).get("matches", []))
                 display["evidence_urls"] = ", ".join(dict.fromkeys(e["source_url"] for e in row.get("evidence", [])))
                 flattened.append(display)
             frame = pd.DataFrame(flattened)
             st.dataframe(frame, width="stretch", hide_index=True)
             st.download_button("Download " + key + " CSV", spreadsheet_csv(frame), file_name=key+"_suppliers.csv", mime="text/csv", key="download_"+key)
-    with tabs[4]:
-        catalogues = result.get("catalogues", {})
-        if not catalogues:
-            st.info("No Shopify catalogue samples in this run.")
-        for url, catalogue in catalogues.items():
-            st.write(url)
-            st.write(catalogue["coverage"])
-            st.write(catalogue.get("observed_price_ranges", []))
-            products = [{k: v for k, v in p.items() if k != "description"} for p in catalogue["products"]]
-            frame = pd.DataFrame(products)
-            st.dataframe(frame, width="stretch", hide_index=True)
-            st.download_button("Download product sample CSV", spreadsheet_csv(frame), file_name="catalogue_products.csv",
-                               mime="text/csv", key="catalogue_"+url)
+    if result.get("catalogues"):
+        with tabs[-1]:
+            for url, catalogue in result["catalogues"].items():
+                st.write(url)
+                st.write(catalogue["coverage"])
+                st.write(catalogue.get("observed_price_ranges", []))
+                products = [{k: v for k, v in p.items() if k != "description"} for p in catalogue["products"]]
+                frame = pd.DataFrame(products)
+                st.dataframe(frame, width="stretch", hide_index=True)
+                st.download_button("Download product sample CSV", spreadsheet_csv(frame), file_name="catalogue_products.csv",
+                                   mime="text/csv", key="catalogue_"+url)
     if result.get("master_reference"):
         st.caption("Compared with: " + result["master_reference"]["filename"] + ". Unmatched rows are not confirmed new suppliers.")
     if result.get("directory_coverage"):
@@ -238,14 +242,14 @@ def render_results(result):
             st.json(result["directory_coverage"])
     if result.get("skipped"):
         with st.expander("Skipped sites (" + str(len(result["skipped"])) + ")"):
-            st.caption("Discovered sites already in the master list, and blocked retailers or marketplaces. Supplied websites are still checked.")
+            st.caption("Sites skipped before verification.")
             st.dataframe(pd.DataFrame(result["skipped"]), width="stretch", hide_index=True)
     if result.get("discovery_candidates"):
         with st.expander("Discovery selection (" + str(len(result["discovery_candidates"])) + " search results)"):
             st.caption("Search hints set checking order. Selected sites still need product, company-role and location verification.")
             st.dataframe(pd.DataFrame(result["discovery_candidates"]), width="stretch", hide_index=True)
             st.json(result.get("discovery_coverage", []))
-    with st.expander("Full evidence and comparison details"):
+    with st.expander("Evidence details"):
         st.json({k: result.get(k, []) for k in ["accepted", "review", "rejected", "observations"]})
     qualified = result.get("accepted", [])
     if qualified and not result.get("preview_only", True):
@@ -261,7 +265,7 @@ def render_results(result):
 
 
 st.title("Supplier Research Agent")
-st.caption("Enter product types, choose your filters, and search for suppliers.")
+st.caption("Search the web for manufacturers, brand owners and distributors of your products.")
 if UI_PASSWORD and not st.session_state.get("unlocked"):
     password = st.text_input("Password", type="password")
     if password and hmac.compare_digest(password.encode(), UI_PASSWORD.encode()):
@@ -274,11 +278,7 @@ st.session_state.setdefault("job_id", None)
 st.session_state.setdefault("is_running", False)
 is_running = st.session_state.is_running
 
-workflow_labels = {"supplier_search": "Find suppliers", "list_compare": "Compare supplier lists",
-                   "distributor_brands": "Extract distributor brands"}
-st.session_state.setdefault("master_references", [])
 with st.sidebar:
-    workflow = st.selectbox("Tool", list(workflow_labels), format_func=workflow_labels.get, disabled=is_running)
     with st.expander("Load saved research"):
         saved_id = st.text_input("Saved job ID", disabled=is_running)
         if st.button("Load saved results", disabled=is_running or not saved_id.strip()):
@@ -287,73 +287,26 @@ with st.sidebar:
             st.session_state.last_result = result
             st.session_state.is_running = result["status"] not in TERMINAL_STATES
             st.rerun()
-    with st.expander("Master supplier list"):
-        master_file = st.file_uploader("Import master CSV", type=["csv"], disabled=is_running)
-        if st.button("Import master list", disabled=is_running or master_file is None):
-            try:
-                content = master_file.getvalue().decode("utf-8-sig")
-            except UnicodeDecodeError:
-                st.error("Save the master CSV with UTF-8 encoding.")
-                st.stop()
-            imported = api("POST", "/references/master", json={"filename": master_file.name, "csv_content": content})
-            st.session_state.master_references = [imported] + [r for r in st.session_state.master_references if r["id"] != imported["id"]]
-            st.success(str(imported["record_count"]) + " supplier records imported. The original CSV is unchanged.")
-        if st.button("Load saved master lists", disabled=is_running):
-            st.session_state.master_references = api("GET", "/references/master")["references"]
-        master_by_id = {r["id"]: r for r in st.session_state.master_references}
-        master_id = st.selectbox("Compare against", [None] + list(master_by_id), disabled=is_running,
-            format_func=lambda value: "No master comparison" if value is None else master_by_id[value]["filename"] + " (" + str(master_by_id[value]["record_count"]) + " rows)")
 
-seed_text, directory_text, comparison_rows, verify_brands = "", "", [], False
-use_discovery = workflow == "supplier_search"
-selected_countries, selected_roles, excluded = ["United States", "Canada"], ["Manufacturer", "Brand owner"], ""
-product = "Supplier list comparison"
-if workflow != "list_compare":
-    product = st.text_input("Product types", placeholder="e.g., Complete cold plunge systems", disabled=is_running,
-                            help="Describe the products you want suppliers for.")
-    country_col, role_col = st.columns(2)
-    with country_col:
-        selected_countries = st.multiselect("Supplier country", COUNTRY_OPTIONS, default=selected_countries, disabled=is_running)
-    with role_col:
-        selected_roles = st.multiselect("Supplier type", ["Manufacturer", "Brand owner", "Distributor", "Retailer"],
-                                        default=selected_roles, disabled=is_running)
-    excluded = st.text_input("Exclude products", placeholder="e.g., replacement filters, accessories", disabled=is_running)
+product = st.text_input("Product types", placeholder="e.g., Complete cold plunge systems", disabled=is_running,
+                        help="Describe the products you want to find suppliers for. No websites needed.")
+country_col, role_col = st.columns(2)
+with country_col:
+    selected_countries = st.multiselect("Supplier country", COUNTRY_OPTIONS, default=["United States", "Canada"], disabled=is_running)
+with role_col:
+    selected_roles = st.multiselect("Supplier type", ["Manufacturer", "Brand owner", "Distributor"],
+                                    default=["Manufacturer", "Brand owner"], disabled=is_running)
+excluded = st.text_input("Exclude products", placeholder="e.g., replacement filters, accessories", disabled=is_running)
 
-if workflow == "distributor_brands":
-    directory_text = st.text_area("Distributor brand directories", placeholder="One directory URL per line", disabled=is_running)
-    verify_brands = st.checkbox("Find official sites and verify listed brands", value=False, disabled=is_running)
-    st.caption("Without verification, this only extracts brand names from the supplied directories.")
-elif workflow == "list_compare":
-    st.caption("Choose a master supplier list in the sidebar, then add the list to compare.")
-    comparison_file = st.file_uploader("Supplier list to compare (CSV)", type=["csv"], disabled=is_running)
-    comparison_text = st.text_area("Or supplier names, one per line", disabled=is_running)
-    if comparison_file is not None:
-        try:
-            comparison_rows = [{"supplier_name": r["supplier_name"], "url": r["url"]}
-                               for r in parse_supplier_csv(comparison_file.getvalue().decode("utf-8-sig"))]
-        except (ValueError, UnicodeDecodeError, csv.Error) as exc:
-            st.error(str(exc))
-            st.stop()
-    comparison_rows.extend({"supplier_name": name.strip(), "url": ""} for name in comparison_text.splitlines() if name.strip())
-    st.caption("List comparison makes no actor or model calls.")
+with st.expander("More options"):
+    target = st.number_input("Suppliers to find", min_value=1, max_value=100, value=5, disabled=is_running)
+    budget = st.number_input("Search budget ($)", min_value=0.5, max_value=100.0, value=5.0, step=0.5, disabled=is_running,
+                             help="The search may stop at this budget before reaching the supplier target.")
+    preview_only = not st.checkbox("Allow Google Sheets export after review", value=False, disabled=is_running,
+                                   help="Export still requires selecting results and clicking Export after the search finishes.")
+st.caption(f"Up to {target} suppliers · ${budget:.2f} search budget")
 
-target, budget, preview_only, directory_limit = 5, 5.0, True, 200
-if workflow != "list_compare":
-    with st.expander("More options"):
-        target = st.number_input("Suppliers to find", min_value=1, max_value=100, value=target, disabled=is_running)
-        budget = st.number_input("Search budget ($)", min_value=0.5, max_value=100.0, value=budget, step=0.5, disabled=is_running,
-                                 help="The search may stop at this budget before reaching the supplier target.")
-        if workflow == "supplier_search":
-            seed_text = st.text_area("Supplier websites to research first", placeholder="Optional: one website per line", disabled=is_running)
-            use_discovery = st.checkbox("Discover additional suppliers", value=True, disabled=is_running)
-        else:
-            directory_limit = st.number_input("Brand limit", min_value=1, max_value=1000, value=directory_limit, disabled=is_running)
-        preview_only = not st.checkbox("Allow Google Sheets export after review", value=False, disabled=is_running,
-                                       help="Export still requires selecting results and clicking Export after the search finishes.")
-    st.caption(f"Up to {target} suppliers · ${budget:.2f} search budget")
-
-run_labels = {"supplier_search": "Search", "list_compare": "Compare lists", "distributor_brands": "Extract brands"}
-run = st.button(run_labels[workflow], type="primary", disabled=is_running)
+run = st.button("Search", type="primary", disabled=is_running)
 if is_running and st.button("Stop research"):
     api("POST", "/research/stop/"+st.session_state.job_id)
 
@@ -364,25 +317,12 @@ if run:
     if not selected_roles:
         st.error("Select at least one supplier type.")
         st.stop()
-    seeds = [line.strip() for line in seed_text.splitlines() if line.strip()]
-    if workflow == "supplier_search" and not seeds and not use_discovery:
-        st.error("Provide supplier websites or enable discovery.")
-        st.stop()
-    if workflow == "list_compare" and (not master_id or not comparison_rows):
-        st.error("Select a master list and provide suppliers to compare.")
-        st.stop()
-    if workflow == "distributor_brands" and not directory_text.strip():
-        st.error("Provide a distributor brand-directory URL.")
-        st.stop()
     # Technical page/call/runtime/provider settings use the bounded API defaults.
-    payload = {"product": product.strip(), "candidate_urls": seeds, "use_apify": use_discovery,
+    payload = {"product": product.strip(), "candidate_urls": [], "use_apify": True,
                "preview_only": preview_only, "target_suppliers": int(target),
                "allowed_countries": selected_countries, "allowed_supplier_types": selected_roles,
                "excluded_products": [p.strip() for p in excluded.split(",") if p.strip()],
-               "max_execution_cost_usd": budget, "research_mode": workflow,
-               "master_reference_id": master_id, "comparison_rows": comparison_rows,
-               "directory_urls": [u.strip() for u in directory_text.splitlines() if u.strip()],
-               "verify_directory_brands": verify_brands, "max_directory_entries": int(directory_limit)}
+               "max_execution_cost_usd": budget, "research_mode": "supplier_search"}
     if selected_roles == ["Distributor"]:
         # Product range, wholesale policy and company context may need four pages.
         payload["max_pages_per_supplier"] = 4

@@ -278,3 +278,14 @@ See [the follow-up report](docs/greptile-followup-fixes-2026-10-30.md) for per-i
 - [x] Use bounded API defaults instead of frontend page/call/runtime/provider controls; retain four-page evidence collection automatically for distributor-only searches.
 - [x] Preserve existing search, comparison, extraction, password, startup and export behavior; 281 offline tests pass with four new UI regressions.
 - [ ] Review and merge the simplification PR, then update the deployed frontend. No live supplier research or deployment was run for this UI change.
+
+## Discovery-only search screen — 2026-11-10
+
+The user clarified that the app should find suppliers from products and filters. This replaces the November 3 decision to retain secondary workflows in the sidebar.
+
+- [x] Always enable discovery from the product brief; remove manual website inputs and the discovery toggle.
+- [x] Remove Retailer from the UI; keep Manufacturer, Brand owner and optional Distributor.
+- [x] Remove the tool selector, list comparison, master-list controls and directory extraction from the UI. Keep saved research loading and existing API contracts.
+- [x] Show the three supplier result groups by default; show older observations/catalogue samples only when present in a saved job.
+- [x] Verify no-seed discovery through actual candidate selection and evidence validation with mocked provider responses; preserve password, startup, budgets and explicit export consent. All 282 offline tests pass; no paid searches were run.
+- [ ] Publish the local UI changes for review and deploy after merge. The live frontend has not been updated by this work.

@@ -28,7 +28,12 @@ class SimpleSearchUITests(unittest.TestCase):
         self.assertIn('Search', [w.label for w in app.main.button])
         self.assertEqual(app.main.expander[0].label, 'More options')
         self.assertFalse(app.main.expander[0].proto.expanded)
-        self.assertEqual([w.label for w in app.sidebar.selectbox], ['Tool', 'Compare against'])
+        self.assertEqual(list(app.selectbox), [])
+        self.assertEqual(list(app.text_area), [])
+        self.assertEqual(list(app.get('file_uploader')), [])
+        roles = next(w for w in app.multiselect if w.label == 'Supplier type')
+        self.assertEqual(roles.options, ['Manufacturer', 'Brand owner', 'Distributor'])
+        self.assertEqual([w.label for w in app.checkbox], ['Allow Google Sheets export after review'])
         request.assert_not_called()
 
     def start_search(self, *, customize=False, supplier_type="Manufacturer"):
@@ -64,6 +69,9 @@ class SimpleSearchUITests(unittest.TestCase):
         self.assertEqual(request.allowed_supplier_types, ['Manufacturer'])
         self.assertEqual(request.excluded_products, ['replacement parts', 'accessories'])
         self.assertTrue(request.use_apify); self.assertTrue(request.preview_only)
+        self.assertEqual(request.candidate_urls, [])
+        self.assertEqual(request.research_mode, 'supplier_search')
+        self.assertIsNone(request.master_reference_id)
         self.assertFalse(request.use_shopping); self.assertFalse(request.use_shopify_catalogue)
         self.assertEqual((request.max_pages, request.max_pages_per_supplier, request.max_external_calls, request.max_runtime_seconds), (30, 3, 50, 300))
         self.assertEqual((request.target_suppliers, request.max_execution_cost_usd), (5, 5.0))
